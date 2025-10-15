@@ -60,7 +60,7 @@ export default function About() {
                 className="rounded-2xl shadow-2xl w-full"
               />
               <div className="absolute -bottom-6 -left-6 bg-navy-900 text-white p-6 rounded-xl shadow-xl max-w-xs">
-                <p className="text-3xl font-bold text-brand-500 mb-1">15+</p>
+                <p className="text-3xl font-bold text-brand-500 mb-1">30+</p>
                 <p className="text-sm">Years of Excellence in Luxury Real Estate</p>
               </div>
             </div>
