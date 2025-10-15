@@ -5,7 +5,7 @@ export default function About() {
     { icon: Home, value: '500+', label: 'Properties Sold' },
     { icon: Users, value: '300+', label: 'Happy Clients' },
     { icon: TrendingUp, value: '₹1000+ Cr', label: 'Worth Transacted' },
-    { icon: Award, value: '15+', label: 'Years Experience' }
+    { icon: Award, value: '30+', label: 'Years Experience' }
   ];
 
   return (
@@ -21,21 +21,21 @@ export default function About() {
             </div>
 
             <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-              With over 15 years of experience in South Mumbai's luxury real estate market,
-              I specialize in premium apartments, sea-facing homes, and exclusive properties
+              With over 30 years of experience in South Mumbai's luxury real estate market,
+              We specialize in premium apartments, sea-facing homes, and exclusive properties
               in the city's most prestigious neighborhoods.
             </p>
 
             <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-              My deep understanding of the South Mumbai property landscape, combined with
+              Our deep understanding of the South Mumbai property landscape, combined with
               personalized service and market expertise, has helped hundreds of discerning
               clients find their dream homes and make sound investment decisions.
             </p>
 
             <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-              I believe in building lasting relationships based on trust, transparency,
+              We believe in building lasting relationships based on trust, transparency,
               and delivering exceptional results. Whether you're buying, selling, or
-              investing, I'm committed to making your real estate journey seamless
+              investing, We are committed to making your real estate journey seamless
               and successful.
             </p>
 
