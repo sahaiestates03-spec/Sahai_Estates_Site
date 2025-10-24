@@ -18,7 +18,6 @@ export default function PropertiesPage() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // read query params from /properties?... when coming from home search
   useEffect(() => {
     const q = new URLSearchParams(locationHook.search);
     setFilters((prev) => ({
@@ -35,7 +34,6 @@ export default function PropertiesPage() {
 
   const filteredProperties = useMemo(() => {
     return properties.filter((p) => {
-      // query search
       if (filters.searchQuery) {
         const q = filters.searchQuery.toLowerCase();
         if (
@@ -44,7 +42,6 @@ export default function PropertiesPage() {
         ) return false;
       }
 
-      // location - contains (area or location)
       if (filters.location) {
         const lq = filters.location.toLowerCase();
         const inLocation =
@@ -53,20 +50,15 @@ export default function PropertiesPage() {
         if (!inLocation) return false;
       }
 
-      // bedrooms
       if (filters.bedrooms && p.bedrooms !== parseInt(filters.bedrooms)) return false;
 
-      // property type (Apartment, Office…)
       if (filters.propertyType && p.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) return false;
 
-      // budget
       if (typeof filters.minPrice === 'number' && p.price < filters.minPrice) return false;
       if (typeof filters.maxPrice === 'number' && p.price > filters.maxPrice) return false;
 
-      // segment (residential / commercial)
       if (filters.segment && p.segment?.toLowerCase() !== filters.segment) return false;
 
-      // listing for (rent / resale / under-construction)
       if (filters.listingFor && p.listingFor?.toLowerCase() !== filters.listingFor) return false;
 
       return true;
