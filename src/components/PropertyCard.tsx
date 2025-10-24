@@ -24,17 +24,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           </div>
         )}
       </div>
-
-      <div className="p-6">
-        <h3 className="text-xl font-semibold mb-1">{property.title}</h3>
-        <p className="text-gray-600 mb-3">{property.location}</p>
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{property.description}</p>
-        <div className="flex items-center gap-4 text-sm text-gray-700 mb-4">
-          <span>🛏 {property.bedrooms} Beds</span>
-          <span>🛁 {property.bathrooms} Baths</span>
-          <span>📐 {property.areaSqft} sq ft</span>
-        </div>
-      </div>
     </div>
   );
 }
