@@ -31,7 +31,6 @@ export default function PropertiesPage() {
 
   return (
     <div className="pt-24 min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-navy-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
@@ -43,8 +42,8 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      {/* Filters + Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Search + Filters */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="flex-1 relative">
@@ -69,7 +68,6 @@ export default function PropertiesPage() {
           {showFilters && (
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Location */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
                   <select
@@ -87,7 +85,6 @@ export default function PropertiesPage() {
                   </select>
                 </div>
 
-                {/* Bedrooms */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Bedrooms</label>
                   <select
@@ -103,7 +100,6 @@ export default function PropertiesPage() {
                   </select>
                 </div>
 
-                {/* Type */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Property Type</label>
                   <select
@@ -122,9 +118,7 @@ export default function PropertiesPage() {
 
                 <div className="flex items-end">
                   <button
-                    onClick={() =>
-                      setFilters({ location: '', priceRange: '', bedrooms: '', propertyType: '', searchQuery: '' })
-                    }
+                    onClick={() => setFilters({ location: '', priceRange: '', bedrooms: '', propertyType: '', searchQuery: '' })}
                     className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
                   >
                     Clear Filters
@@ -140,7 +134,6 @@ export default function PropertiesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProperties.map((p) => (
               <div key={p.id} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
-                {/* thumbnail */}
                 <div className="relative h-64 overflow-hidden">
                   <img
                     src={p.images?.[0]}
@@ -157,7 +150,6 @@ export default function PropertiesPage() {
                   )}
                 </div>
 
-                {/* content */}
                 <div className="p-6">
                   <h3 className="text-xl font-semibold mb-1">{p.title}</h3>
                   <p className="text-gray-600 mb-3">{p.location}</p>
