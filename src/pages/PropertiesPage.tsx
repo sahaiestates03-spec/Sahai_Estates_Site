@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { properties } from '../data/mockData';
 import PropertyCard from '../components/PropertyCard';
 
 interface PropertiesPageProps {
-  onNavigate: (page: string) => void;
+  // kept optional in case something else passes it; we don't use it here
+  onNavigate?: (page: string) => void;
 }
 
-export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
+export default function PropertiesPage(_: PropertiesPageProps) {
+  const navigate = useNavigate();
+
   const [filters, setFilters] = useState({
     location: '',
     priceRange: '',
@@ -15,28 +19,39 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
     propertyType: '',
     searchQuery: ''
   });
-
   const [showFilters, setShowFilters] = useState(false);
 
-  const filteredProperties = properties.filter(property => {
-    if (filters.location && property.location.toLowerCase() !== filters.location.toLowerCase()) {
-      return false;
-    }
-    if (filters.bedrooms && property.bedrooms !== parseInt(filters.bedrooms)) {
-      return false;
-    }
-    if (filters.propertyType && property.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) {
-      return false;
-    }
-    if (filters.searchQuery && !property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
-        !property.description.toLowerCase().includes(filters.searchQuery.toLowerCase())) {
-      return false;
-    }
-    return true;
-  });
+  // navigate to the details page
+  const handleViewDetails = (id: string) => {
+    navigate(`/properties/${id}`);
+  };
+
+  // filter once per change
+  const filteredProperties = useMemo(() => {
+    return properties.filter((property) => {
+      if (filters.location && property.location.toLowerCase() !== filters.location.toLowerCase()) {
+        return false;
+      }
+      if (filters.bedrooms && property.bedrooms !== parseInt(filters.bedrooms)) {
+        return false;
+      }
+      if (filters.propertyType && property.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) {
+        return false;
+      }
+      if (
+        filters.searchQuery &&
+        !property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
+        !property.description.toLowerCase().includes(filters.searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [filters]);
 
   return (
     <div className="pt-24 min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="bg-navy-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
@@ -48,6 +63,7 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
         </div>
       </div>
 
+      {/* Filters + Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -74,9 +90,7 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Location
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
                   <select
                     value={filters.location}
                     onChange={(e) => setFilters({ ...filters, location: e.target.value })}
@@ -93,9 +107,7 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Bedrooms
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Bedrooms</label>
                   <select
                     value={filters.bedrooms}
                     onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
@@ -110,9 +122,7 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Property Type
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Property Type</label>
                   <select
                     value={filters.propertyType}
                     onChange={(e) => setFilters({ ...filters, propertyType: e.target.value })}
@@ -129,13 +139,15 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
 
                 <div className="flex items-end">
                   <button
-                    onClick={() => setFilters({
-                      location: '',
-                      priceRange: '',
-                      bedrooms: '',
-                      propertyType: '',
-                      searchQuery: ''
-                    })}
+                    onClick={() =>
+                      setFilters({
+                        location: '',
+                        priceRange: '',
+                        bedrooms: '',
+                        propertyType: '',
+                        searchQuery: ''
+                      })
+                    }
                     className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
                   >
                     Clear Filters
@@ -152,7 +164,7 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
               <PropertyCard
                 key={property.id}
                 property={property}
-                onViewDetails={onNavigate}
+                onViewDetails={handleViewDetails}
               />
             ))}
           </div>
@@ -162,13 +174,15 @@ export default function PropertiesPage({ onNavigate }: PropertiesPageProps) {
             <h3 className="text-2xl font-bold text-gray-700 mb-2">No Properties Found</h3>
             <p className="text-gray-600 mb-6">Try adjusting your filters to see more results</p>
             <button
-              onClick={() => setFilters({
-                location: '',
-                priceRange: '',
-                bedrooms: '',
-                propertyType: '',
-                searchQuery: ''
-              })}
+              onClick={() =>
+                setFilters({
+                  location: '',
+                  priceRange: '',
+                  bedrooms: '',
+                  propertyType: '',
+                  searchQuery: ''
+                })
+              }
               className="bg-navy-900 hover:bg-brand-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
               Clear All Filters
