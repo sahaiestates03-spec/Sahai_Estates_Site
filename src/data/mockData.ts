@@ -295,21 +295,6 @@ export const properties: Property[] = [
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
     isFeatured: true,
     status: 'available'
-  },
-  {
-    id: '15',
-    title: 'Luxury Sky Villa at Prabhadevi',
-    description: 'Exclusive sky villa on the 40th floor with 360-degree views. Features private elevator access and top-tier amenities.',
-    price: 145000000,
-    location: 'Prabhadevi',
-    bedrooms: 5,
-    bathrooms: 6,
-    areaSqft: 5200,
-    propertyType: 'Sky Villa',
-    amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
-    images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
-    status: 'available'
   }
 ];
 
