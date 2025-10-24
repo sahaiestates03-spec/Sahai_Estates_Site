@@ -6,9 +6,9 @@ type Tab = 'resale' | 'rent' | 'under-construction';
 type Segment = 'residential' | 'commercial';
 
 const POPULAR_LOCALITIES = [
-  'Worli', 'Worli Sea Face', 'Lower Parel', 'Prabhadevi', 'Malabar Hill',
-  'Breach Candy', 'Cuffe Parade', 'Pedder Road', 'Kemps Corner', 'Tardeo',
-  'Churchgate', 'Walkeshwar', 'Altamount Road', 'Napean Sea Road'
+  'Worli','Worli Sea Face','Lower Parel','Prabhadevi','Malabar Hill',
+  'Breach Candy','Cuffe Parade','Pedder Road','Kemps Corner','Tardeo',
+  'Churchgate','Walkeshwar','Altamount Road','Napean Sea Road'
 ];
 
 const BUDGETS = [
@@ -19,7 +19,12 @@ const BUDGETS = [
   { label: '₹25 Cr+',    min: '250000000', max: '' },
 ];
 
-const PTYPES = ['Apartment', 'Penthouse', 'Duplex', 'Villa', 'Sky Villa', 'Office', 'Retail'];
+const PTYPES = ['Apartment','Penthouse','Duplex','Villa','Sky Villa','Office','Retail'];
+
+// ✅ One place to control input/select styles (forces dark text)
+const INPUT =
+  'w-full px-3 py-2 border rounded-lg bg-white text-gray-900 placeholder:text-gray-500 ' +
+  'focus:ring-2 focus:ring-brand-500 outline-none';
 
 export default function HomeSearch() {
   const navigate = useNavigate();
@@ -28,7 +33,7 @@ export default function HomeSearch() {
   const [segment, setSegment] = useState<Segment>('residential');
 
   const [location, setLocation] = useState('');
-  const [panelOpen, setPanelOpen] = useState(false);        // ⬅️ compact by default
+  const [panelOpen, setPanelOpen] = useState(false);
   const [cursor, setCursor] = useState(-1);
 
   const [min, setMin] = useState('');
@@ -51,7 +56,6 @@ export default function HomeSearch() {
     return Array.from(new Set(merged)).slice(0, 8);
   }, [location, recent]);
 
-  // close panel on outside click
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!rootRef.current) return;
@@ -64,7 +68,6 @@ export default function HomeSearch() {
 
   const pickSuggestion = (val: string) => {
     setLocation(val);
-    // store in recent
     const next = [val, ...recent.filter(r => r !== val)].slice(0, 6);
     setRecent(next);
     localStorage.setItem('recentLocs', JSON.stringify(next));
@@ -126,7 +129,8 @@ export default function HomeSearch() {
             id="segment"
             value={segment}
             onChange={e => setSegment(e.target.value as Segment)}
-            className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+            className={INPUT}
+            style={{ color: '#111' }}   // hard override in case of global text-white
           >
             <option value="residential">All Residential</option>
             <option value="commercial">All Commercial</option>
@@ -145,7 +149,8 @@ export default function HomeSearch() {
               onFocus={() => setPanelOpen(true)}
               onKeyDown={onLocKey}
               placeholder='Try "Worli", "Prabhadevi", "3 BHK in Lower Parel"'
-              className="w-full pl-9 pr-8 py-2 border rounded-lg text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+              className={`${INPUT} pl-9 pr-8`}
+              style={{ color: '#111' }}
               autoComplete="street-address"
             />
             <button
@@ -158,7 +163,7 @@ export default function HomeSearch() {
             </button>
           </div>
 
-          {/* DROPDOWN PANEL (opens on focus/click) */}
+          {/* DROPDOWN PANEL */}
           {panelOpen && (
             <div className="absolute z-30 mt-2 w-full md:w-[min(860px,92vw)] bg-white rounded-xl border shadow-xl p-4 left-0">
               {/* Suggestions */}
@@ -172,7 +177,7 @@ export default function HomeSearch() {
                         onClick={() => pickSuggestion(s)}
                         className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left ${
                           i === cursor ? 'bg-gray-100' : ''
-                        }`}
+                        } text-gray-900`}   // ensure dark text in suggestions
                       >
                         <MapPin size={16} className="text-brand-600" /> {s}
                       </button>
@@ -214,7 +219,8 @@ export default function HomeSearch() {
                     placeholder="e.g. 50000000"
                     value={min}
                     onChange={e => setMin(e.target.value.replace(/\D/g, ''))}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+                    className={INPUT}
+                    style={{ color: '#111' }}
                   />
                   <p className="text-[10px] text-gray-500 mt-1">Amount in INR</p>
                 </div>
@@ -227,7 +233,8 @@ export default function HomeSearch() {
                     placeholder="e.g. 200000000"
                     value={max}
                     onChange={e => setMax(e.target.value.replace(/\D/g, ''))}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+                    className={INPUT}
+                    style={{ color: '#111' }}
                   />
                   <p className="text-[10px] text-gray-500 mt-1">Amount in INR</p>
                 </div>
@@ -238,7 +245,8 @@ export default function HomeSearch() {
                     id="bhk"
                     value={bhk}
                     onChange={e => setBhk(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+                    className={INPUT}
+                    style={{ color: '#111' }}
                   >
                     <option value="">Any</option>
                     <option value="2">2 BHK</option>
@@ -254,7 +262,8 @@ export default function HomeSearch() {
                     id="ptype"
                     value={ptype}
                     onChange={e => setPtype(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+                    className={INPUT}
+                    style={{ color: '#111' }}
                   >
                     <option value="">All Types</option>
                     {PTYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -265,19 +274,19 @@ export default function HomeSearch() {
               {/* Chips + Clear + Apply */}
               <div className="mt-3 flex flex-wrap gap-2">
                 {bhk && (
-                  <span className="text-xs px-2 py-1 bg-white border rounded-full">
+                  <span className="text-xs px-2 py-1 bg-white border rounded-full text-gray-900">
                     {bhk} BHK
                     <button className="ml-1 text-gray-500" onClick={() => setBhk('')} aria-label="remove"><X size={12}/></button>
                   </span>
                 )}
                 {(min || max) && (
-                  <span className="text-xs px-2 py-1 bg-white border rounded-full">
+                  <span className="text-xs px-2 py-1 bg-white border rounded-full text-gray-900">
                     Budget: {min ? `₹${(+min/1e7).toFixed(2)}Cr` : '—'} – {max ? `₹${(+max/1e7).toFixed(2)}Cr` : '—'}
                     <button className="ml-1 text-gray-500" onClick={() => { setMin(''); setMax(''); }} aria-label="remove"><X size={12}/></button>
                   </span>
                 )}
                 {ptype && (
-                  <span className="text-xs px-2 py-1 bg-white border rounded-full">
+                  <span className="text-xs px-2 py-1 bg-white border rounded-full text-gray-900">
                     {ptype}
                     <button className="ml-1 text-gray-500" onClick={() => setPtype('')} aria-label="remove"><X size={12}/></button>
                   </span>
@@ -296,7 +305,7 @@ export default function HomeSearch() {
           )}
         </div>
 
-        {/* Search (main) */}
+        {/* Search button (compact row) */}
         <div className="flex items-end">
           <button
             onClick={go}
