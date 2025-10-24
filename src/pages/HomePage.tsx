@@ -4,15 +4,11 @@ import About from '../components/About';
 import Testimonials from '../components/Testimonials';
 import ContactForm from '../components/ContactForm';
 
-interface HomePageProps {
-  onNavigate: (page: string) => void;
-}
-
-export default function HomePage({ onNavigate }: HomePageProps) {
+export default function HomePage() {
   return (
     <div>
-      <Hero onNavigate={onNavigate} />
-      <FeaturedProperties onNavigate={onNavigate} />
+      <Hero />
+      <FeaturedProperties />
       <About />
       <Testimonials />
       <ContactForm />
