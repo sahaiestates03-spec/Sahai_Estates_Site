@@ -3,11 +3,11 @@ import { properties } from '../data/mockData';
 
 export default function PropertyDetailsPage() {
   const { id } = useParams();
-  const property = properties.find(p => p.id === id);
+  const property = properties.find((p) => p.id === id);
 
   if (!property) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="pt-24 max-w-5xl mx-auto p-6">
         <h1 className="text-2xl font-semibold">Property not found</h1>
       </div>
     );
@@ -27,7 +27,7 @@ export default function PropertyDetailsPage() {
           <p className="mt-2 font-semibold">{formatPrice(property.price)}</p>
         </div>
 
-        {/* Simple responsive gallery from ALL images */}
+        {/* gallery */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {property.images?.map((src, i) => (
             <img
@@ -55,4 +55,3 @@ export default function PropertyDetailsPage() {
     </div>
   );
 }
-
