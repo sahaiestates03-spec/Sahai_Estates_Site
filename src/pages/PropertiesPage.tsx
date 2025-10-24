@@ -15,22 +15,19 @@ export default function PropertiesPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
-      if (filters.location && property.location.toLowerCase() !== filters.location.toLowerCase()) return false;
-      if (filters.bedrooms && property.bedrooms !== parseInt(filters.bedrooms)) return false;
-      if (filters.propertyType && property.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) return false;
-      if (
-        filters.searchQuery &&
-        !property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
-        !property.description.toLowerCase().includes(filters.searchQuery.toLowerCase())
-      ) return false;
+    return properties.filter((p) => {
+      if (filters.location && p.location.toLowerCase() !== filters.location.toLowerCase()) return false;
+      if (filters.bedrooms && p.bedrooms !== parseInt(filters.bedrooms)) return false;
+      if (filters.propertyType && p.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) return false;
+      if (filters.searchQuery &&
+          !p.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
+          !p.description.toLowerCase().includes(filters.searchQuery.toLowerCase())) return false;
       return true;
     });
   }, [filters]);
 
   return (
     <div className="pt-24 min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-navy-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
@@ -42,7 +39,6 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      {/* Filters + Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -68,6 +64,7 @@ export default function PropertiesPage() {
           {showFilters && (
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* location */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
                   <select
@@ -85,6 +82,7 @@ export default function PropertiesPage() {
                   </select>
                 </div>
 
+                {/* bedrooms */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Bedrooms</label>
                   <select
@@ -100,6 +98,7 @@ export default function PropertiesPage() {
                   </select>
                 </div>
 
+                {/* type */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Property Type</label>
                   <select
@@ -118,15 +117,7 @@ export default function PropertiesPage() {
 
                 <div className="flex items-end">
                   <button
-                    onClick={() =>
-                      setFilters({
-                        location: '',
-                        priceRange: '',
-                        bedrooms: '',
-                        propertyType: '',
-                        searchQuery: ''
-                      })
-                    }
+                    onClick={() => setFilters({ location: '', priceRange: '', bedrooms: '', propertyType: '', searchQuery: '' })}
                     className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
                   >
                     Clear Filters
@@ -139,14 +130,11 @@ export default function PropertiesPage() {
 
         {filteredProperties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProperties.map((property) => (
-              <div key={property.id} className="group">
-                <PropertyCard property={property} onViewDetails={() => {}} />
+            {filteredProperties.map((p) => (
+              <div key={p.id} className="group">
+                <PropertyCard property={p} />
                 <div className="mt-3">
-                  <Link
-                    to={`/properties/${property.id}`}
-                    className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-semibold"
-                  >
+                  <Link to={`/properties/${p.id}`} className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-semibold">
                     View Details
                   </Link>
                 </div>
@@ -159,15 +147,7 @@ export default function PropertiesPage() {
             <h3 className="text-2xl font-bold text-gray-700 mb-2">No Properties Found</h3>
             <p className="text-gray-600 mb-6">Try adjusting your filters to see more results</p>
             <button
-              onClick={() =>
-                setFilters({
-                  location: '',
-                  priceRange: '',
-                  bedrooms: '',
-                  propertyType: '',
-                  searchQuery: ''
-                })
-              }
+              onClick={() => setFilters({ location: '', priceRange: '', bedrooms: '', propertyType: '', searchQuery: '' })}
               className="bg-navy-900 hover:bg-brand-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
               Clear All Filters
