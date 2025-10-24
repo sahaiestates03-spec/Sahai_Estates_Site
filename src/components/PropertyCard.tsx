@@ -5,6 +5,8 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
+  if (!property) return null; // ✅ Prevents crash
+
   const formatPrice = (price: number) => `₹${(price / 10_000_000).toFixed(2)} Cr`;
 
   return (
