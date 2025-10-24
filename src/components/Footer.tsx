@@ -1,14 +1,20 @@
 import { Phone, Mail, MapPin, Facebook, Twitter, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-interface FooterProps {
-  onNavigate: (page: string) => void;
-}
+export default function Footer() {
+  const quickLinks = [
+    { label: 'Home', to: '/' },
+    { label: 'Properties', to: '/properties' },
+    { label: 'About', to: '/about' },
+    { label: 'Services', to: '/services' },
+    { label: 'Contact', to: '/contact' },
+  ];
 
-export default function Footer({ onNavigate }: FooterProps) {
   return (
     <footer className="bg-navy-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand */}
           <div>
             <img
               src="/Sahai Estates 131.png"
@@ -19,27 +25,28 @@ export default function Footer({ onNavigate }: FooterProps) {
               Your trusted partner for premium luxury real estate in South Mumbai.
               Specializing in sea-facing apartments and exclusive properties.
             </p>
-            <p className="text-xs text-gray-400">
-              RERA No: A51900001512
-            </p>
+            <p className="text-xs text-gray-400">RERA No: A51900001512</p>
           </div>
 
+          {/* Quick Links */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2">
-              {['Home', 'Properties', 'About', 'Services', 'Contact'].map((item) => (
-                <li key={item}>
-                  <button
-                    onClick={() => onNavigate(item.toLowerCase())}
+              {quickLinks.map(({ label, to }) => (
+                <li key={label}>
+                  <Link
+                    to={to}
                     className="text-gray-300 hover:text-brand-500 transition-colors text-sm"
+                    aria-label={`Go to ${label}`}
                   >
-                    {item}
-                  </button>
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
+          {/* Contact */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Contact</h4>
             <ul className="space-y-3">
@@ -77,6 +84,7 @@ export default function Footer({ onNavigate }: FooterProps) {
             </ul>
           </div>
 
+          {/* Socials */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
             <div className="flex gap-4">
@@ -84,6 +92,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 href="https://www.facebook.com/sahaiestates/"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Open Facebook"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-brand-500 transition-colors"
               >
                 <Facebook size={20} />
@@ -92,6 +101,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 href="https://twitter.com/sahaiestates131"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Open Twitter"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-brand-500 transition-colors"
               >
                 <Twitter size={20} />
@@ -100,6 +110,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 href="http://www.sahaiestates.com/"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Open website"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-brand-500 transition-colors"
               >
                 <Globe size={20} />
