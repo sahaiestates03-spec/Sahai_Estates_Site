@@ -23,7 +23,7 @@ export const properties: Property[] = [
       '24x7 Security',
       'Power Backup'
     ],
-    images: ['https://images.pexels.com/photos/1743231/pexels-photo-1743231.jpeg'],
+    images: ['/public/public/properties/WhatsApp Image 2025-05-22 at 3.11.02 PM (1).jpeg'],
     isFeatured: true,
     status: 'available'
   },
