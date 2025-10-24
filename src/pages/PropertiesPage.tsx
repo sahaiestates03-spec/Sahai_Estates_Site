@@ -5,7 +5,6 @@ import { properties } from '../data/mockData';
 import PropertyCard from '../components/PropertyCard';
 
 interface PropertiesPageProps {
-  // kept optional in case something else passes it; we don't use it here
   onNavigate?: (page: string) => void;
 }
 
@@ -21,12 +20,10 @@ export default function PropertiesPage(_: PropertiesPageProps) {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // navigate to the details page
-  const handleViewDetails = (id: string) => {
+   const handleViewDetails = (id: string) => {
     navigate(`/properties/${id}`);
   };
 
-  // filter once per change
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
       if (filters.location && property.location.toLowerCase() !== filters.location.toLowerCase()) {
