@@ -1,16 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { properties } from '../data/mockData';
 import PropertyCard from '../components/PropertyCard';
 
-interface PropertiesPageProps {
-  onNavigate?: (page: string) => void;
-}
-
-export default function PropertiesPage(_: PropertiesPageProps) {
-  const navigate = useNavigate();
-
+export default function PropertiesPage() {
   const [filters, setFilters] = useState({
     location: '',
     priceRange: '',
@@ -20,28 +14,16 @@ export default function PropertiesPage(_: PropertiesPageProps) {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-   const handleViewDetails = (id: string) => {
-    navigate(`/properties/${id}`);
-  };
-
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
-      if (filters.location && property.location.toLowerCase() !== filters.location.toLowerCase()) {
-        return false;
-      }
-      if (filters.bedrooms && property.bedrooms !== parseInt(filters.bedrooms)) {
-        return false;
-      }
-      if (filters.propertyType && property.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) {
-        return false;
-      }
+      if (filters.location && property.location.toLowerCase() !== filters.location.toLowerCase()) return false;
+      if (filters.bedrooms && property.bedrooms !== parseInt(filters.bedrooms)) return false;
+      if (filters.propertyType && property.propertyType.toLowerCase() !== filters.propertyType.toLowerCase()) return false;
       if (
         filters.searchQuery &&
         !property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
         !property.description.toLowerCase().includes(filters.searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
+      ) return false;
       return true;
     });
   }, [filters]);
@@ -158,11 +140,17 @@ export default function PropertiesPage(_: PropertiesPageProps) {
         {filteredProperties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProperties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                onViewDetails={handleViewDetails}
-              />
+              <div key={property.id} className="group">
+                <PropertyCard property={property} onViewDetails={() => {}} />
+                <div className="mt-3">
+                  <Link
+                    to={`/properties/${property.id}`}
+                    className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-semibold"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
