@@ -3,7 +3,7 @@ import { properties } from '../data/mockData';
 
 export default function PropertyDetailsPage() {
   const { id } = useParams();
-  const property = properties.find((p) => p.id === id);
+  const property = properties.find(p => p.id === id);
 
   if (!property) {
     return (
@@ -14,7 +14,7 @@ export default function PropertyDetailsPage() {
   }
 
   const formatPrice = (price: number) => {
-    const cr = price / 10000000;
+    const cr = price / 10_000_000;
     return `₹${cr.toFixed(2)} Cr`;
   };
 
