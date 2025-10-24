@@ -23,12 +23,7 @@ export const properties: Property[] = [
       '24x7 Security',
       'Power Backup'
     ],
-    images: ['/prop-pics/Beaumonde-903A-1.jpeg',
-  '/prop-pics/Beaumonde-903A-2.jpeg',
-  '/prop-pics/Beaumonde-903A-3.jpeg',
-  '/prop-pics/Beaumonde-903A-4.jpeg',
-  '/prop-pics/Beaumonde-903A-5.jpeg',
-  '/prop-pics/Beaumonde-903A-6.jpeg'
+    images: ['/prop-pics/Beaumonde-903A-1.jpeg', '/prop-pics/Beaumonde-903A-2.jpeg', '/prop-pics/Beaumonde-903A-3.jpeg', '/prop-pics/Beaumonde-903A-4.jpeg', '/prop-pics/Beaumonde-903A-5.jpeg','/prop-pics/Beaumonde-903A-6.jpeg'
 ],
     isFeatured: true,
     status: 'available'
