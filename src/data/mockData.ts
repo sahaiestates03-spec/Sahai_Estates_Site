@@ -23,9 +23,9 @@ export const properties: Property[] = [
   ],
   isFeatured: true,
   status: 'available',
-    segment: 'residential',             // or 'commercial'
-listingFor: 'resale',               // or 'rent' or 'under-construction'
-areaLocality: 'Prabhadevi',         // optional, helps location search
+    segment: 'residential',     
+listingFor: 'resale',            
+areaLocality: 'Prabhadevi',    
   
   },
   {
