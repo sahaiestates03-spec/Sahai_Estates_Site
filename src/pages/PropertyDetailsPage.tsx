@@ -13,10 +13,7 @@ export default function PropertyDetailsPage() {
     );
   }
 
-  const formatPrice = (price: number) => {
-    const cr = price / 10_000_000;
-    return `₹${cr.toFixed(2)} Cr`;
-  };
+  const formatPrice = (price: number) => `₹${(price/10_000_000).toFixed(2)} Cr`;
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
@@ -27,16 +24,10 @@ export default function PropertyDetailsPage() {
           <p className="mt-2 font-semibold">{formatPrice(property.price)}</p>
         </div>
 
-        {/* gallery */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {property.images?.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt={`${property.title} ${i + 1}`}
-              className="w-full h-64 object-cover rounded-lg shadow"
-              loading="lazy"
-            />
+            <img key={i} src={src} alt={`${property.title} ${i+1}`}
+              className="w-full h-64 object-cover rounded-lg shadow" loading="lazy" />
           ))}
         </div>
 
