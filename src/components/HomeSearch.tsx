@@ -60,7 +60,7 @@ export default function HomeSearch() {
             value={location}
             onChange={e => setLocation(e.target.value)}
             placeholder="e.g. Prabhadevi, Worli, Malabar Hill"
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+            className="w-full px-3 py-2 border rounded-lg text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-brand-500 outline-none bg-white"
           />
         </div>
 
@@ -84,7 +84,8 @@ export default function HomeSearch() {
             placeholder="e.g. 50000000"
             value={min}
             onChange={e => setMin(e.target.value.replace(/\D/g, ''))}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+            className="w-full px-3 py-2 border rounded-lg text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-brand-500 outline-none bg-white"
+
           />
           <p className="text-[10px] text-gray-500 mt-1">Amount in INR</p>
         </div>
@@ -96,7 +97,8 @@ export default function HomeSearch() {
             placeholder="e.g. 200000000"
             value={max}
             onChange={e => setMax(e.target.value.replace(/\D/g, ''))}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+            className="w-full px-3 py-2 border rounded-lg text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-brand-500 outline-none bg-white"
+
           />
           <p className="text-[10px] text-gray-500 mt-1">Amount in INR</p>
         </div>
