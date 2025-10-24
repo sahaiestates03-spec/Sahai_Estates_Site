@@ -178,7 +178,7 @@ export const properties: Property[] = [
       'Power Backup'
     ],
     images: ['https://images.pexels.com/photos/1743231/pexels-photo-1743231.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -203,7 +203,7 @@ export const properties: Property[] = [
       '24x7 Security'
     ],
     images: ['https://images.pexels.com/photos/1743231/pexels-photo-1743231.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -218,7 +218,7 @@ export const properties: Property[] = [
     propertyType: 'Sky Villa',
     amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -233,7 +233,7 @@ export const properties: Property[] = [
     propertyType: 'Sky Villa',
     amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -248,7 +248,7 @@ export const properties: Property[] = [
     propertyType: 'Sky Villa',
     amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -263,7 +263,7 @@ export const properties: Property[] = [
     propertyType: 'Sky Villa',
     amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -278,7 +278,7 @@ export const properties: Property[] = [
     propertyType: 'Sky Villa',
     amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   },
   {
@@ -293,7 +293,7 @@ export const properties: Property[] = [
     propertyType: 'Sky Villa',
     amenities: ['Panoramic View', 'Private Elevator', 'Infinity Pool', 'Helipad Access', 'Concierge', 'Smart Home'],
     images: ['https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg'],
-    isFeatured: true,
+    isFeatured: false,
     status: 'available'
   }
 ];
