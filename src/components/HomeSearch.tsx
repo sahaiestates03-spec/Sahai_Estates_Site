@@ -1,27 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-type Tab = 'rent' | 'resale' | 'under-construction';
+type Tab = 'resale' | 'rent' | 'under-construction';
 type Segment = 'residential' | 'commercial';
 
 export default function HomeSearch() {
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState<Tab>('resale');             
+  const [tab, setTab] = useState<Tab>('resale');
   const [segment, setSegment] = useState<Segment>('residential');
   const [location, setLocation] = useState('');
   const [min, setMin] = useState<string>('');
   const [max, setMax] = useState<string>('');
 
   const go = () => {
-    const params = new URLSearchParams();
-    params.set('for', tab);                    
-    params.set('segment', segment);             
-    if (location.trim()) params.set('location', location.trim());
-    if (min) params.set('min', min);
-    if (max) params.set('max', max);
-
-    navigate(`/properties?${params.toString()}`);
+    const q = new URLSearchParams();
+    q.set('for', tab);
+    q.set('segment', segment);
+    if (location.trim()) q.set('location', location.trim());
+    if (min) q.set('min', min);
+    if (max) q.set('max', max);
+    navigate(`/properties?${q.toString()}`);
   };
 
   return (
