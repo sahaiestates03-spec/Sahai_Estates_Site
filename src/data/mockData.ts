@@ -2,37 +2,27 @@ import { Property, Testimonial } from '../types';
 
 export const properties: Property[] = [
   {
-    id: '1',
-    title: 'Beaumonde, Prabhadevi – 3 BHK Sea-View with Balcony & SRB',
-    description: 'Premium 3 BHK apartment in Beaumonde with sea view, balcony, and separate staff room/bath. 1550 sqft usable carpet, 2 car parks. High-end tower with lifestyle amenities.',
-    price: 187500000,
-    location: 'Prabhadevi',
-    bedrooms: 3,
-    bathrooms: 4,
-    areaSqft: 1550,
-    propertyType: 'Apartment',
-    amenities: [
-      'Sea View',
-      'Balcony',
-      'SRB (Staff Room + Bath)',
-      '2 Car Parks',
-      'Club House',
-      'Swimming Pool',
-      'Gym',
-      'High-speed Elevators',
-      '24x7 Security',
-      'Power Backup'
-    ],
-    images: [
-      '/prop-pics/Beaumonde-903A-1.jpeg',
-      '/prop-pics/Beaumonde-903A-2.jpeg',
-      '/prop-pics/Beaumonde-903A-3.jpeg',
-      '/prop-pics/Beaumonde-903A-4.jpeg',
-      '/prop-pics/Beaumonde-903A-5.jpeg',
-      '/prop-pics/Beaumonde-903A-6.jpeg',
-    ],
-    isFeatured: true,
-    status: 'available'
+     id: 'beaumonde-903a',
+  title: 'Beaumonde, Prabhadevi – 3 BHK Sea-View with Balcony & SRB',
+  description:
+    'Premium 3 BHK apartment in Beaumonde with sea view, balcony, and separate staff room/bath. 1550 sqft usable carpet, 2 car parks, high-floor unit.',
+  price: 187500000, // ₹18.75 Cr
+  location: 'Prabhadevi',
+  bedrooms: 3,
+  bathrooms: 4,
+  areaSqft: 1550,
+  propertyType: 'Apartment',
+  amenities: ['Sea View','Balcony','SRB','2 Car Parks','Club House','Swimming Pool','Gym','High-speed Elevators','24x7 Security','Power Backup'],
+  images: [
+    '/prop-pics/Beaumonde-903A-1.jpeg',
+    '/prop-pics/Beaumonde-903A-2.jpeg',
+    '/prop-pics/Beaumonde-903A-3.jpeg',
+    '/prop-pics/Beaumonde-903A-4.jpeg',
+    '/prop-pics/Beaumonde-903A-5.jpeg',
+    '/prop-pics/Beaumonde-903A-6.jpeg'
+  ],
+  isFeatured: true,
+  status: 'available'
   },
   {
     id: '2',
