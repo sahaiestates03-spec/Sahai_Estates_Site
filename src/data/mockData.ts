@@ -22,7 +22,7 @@ export const properties: Property[] = [
     '/prop-pics/Beaumonde-903A-6.jpeg'
   ],
   isFeatured: true,
-  status: 'available'
+  status: 'available',
     segment: 'residential',             // or 'commercial'
 listingFor: 'resale',               // or 'rent' or 'under-construction'
 areaLocality: 'Prabhadevi',         // optional, helps location search
