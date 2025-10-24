@@ -1,95 +1,67 @@
-import { Menu, X, Phone } from 'lucide-react';
 import { useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 
-interface NavbarProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-}
+export default function Navbar() {
+  const [open, setOpen] = useState(false);
 
-export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const navItems = [
-    { name: 'Home', id: 'home' },
-    { name: 'Properties', id: 'properties' },
-    { name: 'About', id: 'about' },
-    { name: 'Services', id: 'services' },
-    { name: 'Contact', id: 'contact' }
-  ];
+  const linkClasses = ({ isActive }: { isActive: boolean }) =>
+    `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+      isActive ? 'text-brand-600' : 'text-gray-700 hover:text-brand-600'
+    }`;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <div className="flex-shrink-0 cursor-pointer flex items-center gap-3" onClick={() => onNavigate('home')}>
-            <img
-              src="/Sahai Estates 131.png"
-              alt="Sahai Estates"
-              className="h-12 w-auto"
-            />
-          </div>
+    <header className="fixed top-0 inset-x-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/Sahai Estates 131.png" alt="Sahai Estates" className="h-7 w-auto" />
+        </Link>
 
-          <div className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={`text-sm font-medium transition-colors duration-200 ${
-                  currentPage === item.id
-                    ? 'text-brand-600 border-b-2 border-brand-600'
-                    : 'text-gray-700 hover:text-brand-600'
-                }`}
-              >
-                {item.name}
-              </button>
-            ))}
-            <a
-              href="tel:+919920214015"
-              className="flex items-center gap-2 bg-navy-900 text-white px-6 py-2.5 rounded-md hover:bg-navy-800 transition-colors"
-            >
-              <Phone size={16} />
-              <span className="text-sm font-medium">Call Now</span>
-            </a>
-          </div>
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-1">
+          <NavLink to="/" className={linkClasses}>Home</NavLink>
+          <NavLink to="/properties" className={linkClasses}>Properties</NavLink>
+          <NavLink to="/about" className={linkClasses}>About</NavLink>
+          <NavLink to="/services" className={linkClasses}>Services</NavLink>
+          <NavLink to="/contact" className={linkClasses}>Contact</NavLink>
 
-          <button
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          <a
+            href="tel:+919920214015"
+            className="ml-3 inline-flex items-center rounded-md bg-navy-900 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-600"
           >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+            📞 Call Now
+          </a>
         </div>
-      </div>
 
-      {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
-          <div className="px-4 pt-2 pb-4 space-y-2">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  onNavigate(item.id);
-                  setIsMenuOpen(false);
-                }}
-                className={`block w-full text-left px-4 py-3 rounded-md ${
-                  currentPage === item.id
-                    ? 'bg-brand-50 text-brand-600'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {item.name}
-              </button>
-            ))}
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle menu"
+        >
+          ☰
+        </button>
+      </nav>
+
+      {/* Mobile menu */}
+      {open && (
+        <div className="md:hidden border-t border-gray-200 bg-white">
+          <div className="px-4 py-3 space-y-1">
+            <NavLink to="/" className={linkClasses} onClick={() => setOpen(false)}>Home</NavLink>
+            <NavLink to="/properties" className={linkClasses} onClick={() => setOpen(false)}>Properties</NavLink>
+            <NavLink to="/about" className={linkClasses} onClick={() => setOpen(false)}>About</NavLink>
+            <NavLink to="/services" className={linkClasses} onClick={() => setOpen(false)}>Services</NavLink>
+            <NavLink to="/contact" className={linkClasses} onClick={() => setOpen(false)}>Contact</NavLink>
             <a
               href="tel:+919920214015"
-              className="flex items-center justify-center gap-2 bg-navy-900 text-white px-6 py-3 rounded-md hover:bg-navy-800 transition-colors mt-4"
+              className="block mt-2 rounded-md bg-navy-900 text-white px-4 py-2 text-sm font-semibold"
+              onClick={() => setOpen(false)}
             >
-              <Phone size={16} />
-              <span>Call Now</span>
+              📞 Call Now
             </a>
           </div>
         </div>
       )}
-    </nav>
+    </header>
   );
 }
