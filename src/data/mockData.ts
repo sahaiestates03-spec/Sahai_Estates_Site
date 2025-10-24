@@ -155,7 +155,7 @@ export const properties: Property[] = [
     images: ['https://images.pexels.com/photos/1743231/pexels-photo-1743231.jpeg'],
     isFeatured: false,
     status: 'available'
-  }
+  },
   {
     id: '7',
     title: 'Rustomjee Crown, Prabhadevi – 4 BHK (2156 sqft) – Premium Stack',
