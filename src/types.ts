@@ -12,6 +12,9 @@ export interface Property {
   images: string[];
   isFeatured: boolean;
   status: string;
+  segment?: 'residential' | 'commercial';
+  listingFor?: 'rent' | 'resale' | 'under-construction';
+  areaLocality?: string;
 }
 
 export interface Testimonial {
