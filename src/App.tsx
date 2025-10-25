@@ -7,8 +7,8 @@ import ContactPage from './pages/ContactPage';
 import PropertyDetailsPage from './pages/PropertyDetailsPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import Blog from "@/pages/Blog";
-import BlogPost from "@/pages/BlogPost";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 export default function App() {
   return (
