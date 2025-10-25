@@ -24,17 +24,18 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
-            <img
-              src="/Sahai Estates 131.png"
-              alt="Sahai Estates"
-              className="h-10 w-auto mb-4"
-            />
-            <p className="text-gray-300 text-sm leading-relaxed mb-3">
-              Your trusted partner for premium luxury real estate in South Mumbai.
-              Specializing in sea-facing apartments and exclusive properties.
-            </p>
-            <p className="text-xs text-gray-400">RERA No: A51900001512</p>
-          </div>
+  <img
+    src="/Sahai Estates 131.png"
+    alt="Sahai Estates"
+    className="h-14 w-auto mb-4 bg-white rounded-lg p-2 shadow-md"
+  />
+  {/* darken text so it doesn't look washed out next to the brighter logo */}
+  <p className="text-gray-400 text-sm leading-relaxed mb-3">
+    Your trusted partner for premium luxury real estate in South Mumbai.
+    Specializing in sea-facing apartments and exclusive properties.
+  </p>
+  <p className="text-xs text-gray-500">RERA No: A51900001512</p>
+</div>
 
           {/* Quick Links */}
           <div>
