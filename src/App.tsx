@@ -7,6 +7,8 @@ import ContactPage from './pages/ContactPage';
 import PropertyDetailsPage from './pages/PropertyDetailsPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import Blog from "@/pages/Blog";
+import BlogPost from "@/pages/BlogPost";
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
         <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/properties/:id" element={<PropertyDetailsPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
       </Routes>
       <Footer />
     </HashRouter>
