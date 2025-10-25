@@ -1,6 +1,6 @@
 // src/pages/BlogPost.tsx
 import { useParams, Link } from "react-router-dom";
-import { posts } from "/data/posts";
+import { posts } from "./data/posts";
 
 export default function BlogPost() {
   const { slug } = useParams();
