@@ -1,6 +1,6 @@
 // src/config/site.ts
 export const WORKING_HOURS = [
-  { label: 'Monday - Friday:', time: '9:00 AM - 7:00 PM' },
+  { label: 'Monday - Friday:', time: '10:00 AM - 7:00 PM' },
   { label: 'Saturday:',        time: '10:00 AM - 5:00 PM' },
   { label: 'Sunday:',          time: 'By Appointment' },
 ];
@@ -22,6 +22,5 @@ export const CONTACT = {
 export const SOCIALS = {
   facebook: 'https://www.facebook.com/sahaiestates/',
   x: 'https://twitter.com/sahaiestates131',
-  website: 'https://www.sahaiestates.com/',
   // instagram: 'https://instagram.com/yourhandle', // add if needed
 };
