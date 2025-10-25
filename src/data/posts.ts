@@ -2,10 +2,10 @@
 export type Post = {
   slug: string;
   title: string;
-  date: string; // ISO like '2025-10-25'
+  date: string;        // e.g. '2025-10-25'
   excerpt: string;
-  cover?: string;
-  content: string; // simple HTML or markdown-like string
+  cover?: string;      // optional image URL like '/images/blog/img1.jpg'
+  content: string;     // simple HTML string
   tags?: string[];
 };
 
@@ -19,15 +19,12 @@ export const posts: Post[] = [
     cover: "/images/blog/market-2025.jpg",
     tags: ["Market Trends", "South Mumbai"],
     content: `
-<p>South Mumbai continues to attract premium buyers, especially in <strong>Worli</strong>, <strong>Prabhadevi</strong>, and <strong>Mahalaxmi</strong>.
-We’re seeing steady interest in sea-facing inventory and branded residences.</p>
-
+<p>South Mumbai continues to attract premium buyers, especially in <strong>Worli</strong>, <strong>Prabhadevi</strong>, and <strong>Mahalaxmi</strong>.</p>
 <ul>
   <li>Absorption improving in 3–4 BHKs</li>
   <li>Developers offering flexible payment plans</li>
   <li>Quality amenities driving decision-making</li>
 </ul>
-
 <p>For project-specific insights, contact Sahai Estates.</p>
 `
   },
@@ -41,10 +38,10 @@ We’re seeing steady interest in sea-facing inventory and branded residences.</
     content: `
 <p>Sea-facing homes are aspirational, but come with unique considerations:</p>
 <ol>
-  <li><strong>View permanence:</strong> any future development blocking it?</li>
-  <li><strong>Salt corrosion:</strong> window systems & balcony railings.</li>
-  <li><strong>Wind load:</strong> higher floors need better sealing.</li>
-  <li><strong>Parking & access:</strong> valet, visitor parking, ingress-egress.</li>
+  <li><strong>View permanence:</strong> koi future building view block to nahi karegi?</li>
+  <li><strong>Salt corrosion:</strong> windows/railings quality check.</li>
+  <li><strong>Wind load:</strong> higher floors = better sealing.</li>
+  <li><strong>Parking & access:</strong> valet/visitor parking.</li>
   <li><strong>Society rules:</strong> balcony glazing, façade norms, pets.</li>
 </ol>
 <p>We guide clients through each step.</p>
