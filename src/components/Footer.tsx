@@ -1,4 +1,4 @@
-import { Phone, Mail, MapPin, Facebook, Twitter, Globe } from 'lucide-react';
+import { Phone, Mail, MapPin, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -8,7 +8,15 @@ export default function Footer() {
     { label: 'About', to: '/about' },
     { label: 'Services', to: '/services' },
     { label: 'Contact', to: '/contact' },
-  ];
+  ] as const;
+
+  // Social links (X + Website removed)
+  const SOCIALS = {
+    facebook: 'https://www.facebook.com/sahaiestates/',
+    linkedin: 'https://www.linkedin.com/company/sahai-estates/',
+    instagram: 'https://www.instagram.com/sahai_estates/?igsh=NGt6am96bmN2cjl4#',
+    youtube: 'https://www.youtube.com/@sahaiestates4075',
+  } as const;
 
   return (
     <footer className="bg-navy-900 text-white">
@@ -89,7 +97,7 @@ export default function Footer() {
             <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
             <div className="flex gap-4">
               <a
-                href="https://www.facebook.com/sahaiestates/"
+                href={SOCIALS.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Open Facebook"
@@ -98,22 +106,31 @@ export default function Footer() {
                 <Facebook size={20} />
               </a>
               <a
-                href="https://twitter.com/sahaiestates131"
+                href={SOCIALS.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Open Twitter"
+                aria-label="Open LinkedIn"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-brand-500 transition-colors"
               >
-                <Twitter size={20} />
+                <Linkedin size={20} />
               </a>
               <a
-                href="http://www.sahaiestates.com/"
+                href={SOCIALS.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Open website"
+                aria-label="Open Instagram"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-brand-500 transition-colors"
               >
-                <Globe size={20} />
+                <Instagram size={20} />
+              </a>
+              <a
+                href={SOCIALS.youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open YouTube"
+                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-brand-500 transition-colors"
+              >
+                <Youtube size={20} />
               </a>
             </div>
           </div>
