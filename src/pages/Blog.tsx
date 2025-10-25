@@ -1,6 +1,6 @@
 // src/pages/Blog.tsx
 import { Link } from "react-router-dom";
-import { posts } from "@/data/posts";
+import { posts } from "/data/posts";
 
 export default function Blog() {
   const sorted = [...posts].sort(
