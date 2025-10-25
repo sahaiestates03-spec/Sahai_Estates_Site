@@ -8,6 +8,7 @@ export default function Footer() {
     { label: 'About', to: '/about' },
     { label: 'Services', to: '/services' },
     { label: 'Contact', to: '/contact' },
+    { label: 'Blog', to: '/blog' },
   ] as const;
 
   // Social links (X + Website removed)
