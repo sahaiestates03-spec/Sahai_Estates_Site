@@ -12,7 +12,7 @@ export const CONTACT = {
   addressLine2: 'Tardeo, Mumbai - 400034',
   rera: 'A51900001512',
   // “Mon-Sat…” label shown under phones in ContactForm box
-  phoneAvailability: 'Mon-Sat, 9:00 AM - 7:00 PM',
+  phoneAvailability: 'Mon-Sat, 10:00 AM - 7:00 PM',
   // WhatsApp
   whatsappNumberIntl: '919920214015', // no "+" and no leading zeros
   whatsappMessage:
