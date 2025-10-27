@@ -50,7 +50,7 @@ export default function RotatingHero({
             ))}
           </div>
           {/* Light overlays for readability */}
-          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute inset-0 bg-black/10" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/15 to-black/25" />
         </div>
       ) : (
