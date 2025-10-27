@@ -21,7 +21,6 @@ const BUDGETS = [
 
 const PTYPES = ['Apartment','Penthouse','Duplex','Villa','Sky Villa','Office','Retail'];
 
-// ✅ One place to control input/select styles (forces dark text)
 const INPUT =
   'w-full px-3 py-2 border rounded-lg bg-white text-gray-900 placeholder:text-gray-500 ' +
   'focus:ring-2 focus:ring-brand-500 outline-none';
@@ -103,7 +102,10 @@ export default function HomeSearch() {
   const clearAll = () => { setLocation(''); setMin(''); setMax(''); setBhk(''); setPtype(''); };
 
   return (
-    <div ref={rootRef} className="w-full bg-white rounded-2xl shadow-xl p-4 md:p-5">
+    <div
+      ref={rootRef}
+      className="relative z-50 w-full bg-white/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 md:p-5 border border-white/30"
+    >
       {/* Tabs */}
       <div className="flex gap-3 text-sm font-semibold">
         {(['resale','rent','under-construction'] as Tab[]).map(t => (
@@ -130,7 +132,7 @@ export default function HomeSearch() {
             value={segment}
             onChange={e => setSegment(e.target.value as Segment)}
             className={INPUT}
-            style={{ color: '#111' }}   // hard override in case of global text-white
+            style={{ color: '#111' }}
           >
             <option value="residential">All Residential</option>
             <option value="commercial">All Commercial</option>
@@ -165,7 +167,7 @@ export default function HomeSearch() {
 
           {/* DROPDOWN PANEL */}
           {panelOpen && (
-            <div className="absolute z-30 mt-2 w-full md:w-[min(860px,92vw)] bg-white rounded-xl border shadow-xl p-4 left-0">
+            <div className="absolute z-[60] mt-2 w-full md:w-[min(860px,92vw)] bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200 shadow-2xl p-4 left-0">
               {/* Suggestions */}
               <div className="mb-3">
                 <div className="text-[11px] text-gray-500 mb-1">Popular localities</div>
@@ -175,9 +177,7 @@ export default function HomeSearch() {
                       <button
                         onMouseEnter={() => setCursor(i)}
                         onClick={() => pickSuggestion(s)}
-                        className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left ${
-                          i === cursor ? 'bg-gray-100' : ''
-                        } text-gray-900`}   // ensure dark text in suggestions
+                        className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left ${i === cursor ? 'bg-gray-100' : ''} text-gray-900`}
                       >
                         <MapPin size={16} className="text-brand-600" /> {s}
                       </button>
@@ -241,13 +241,7 @@ export default function HomeSearch() {
 
                 <div>
                   <label htmlFor="bhk" className="block text-xs font-medium text-gray-600 mb-1">Bedrooms</label>
-                  <select
-                    id="bhk"
-                    value={bhk}
-                    onChange={e => setBhk(e.target.value)}
-                    className={INPUT}
-                    style={{ color: '#111' }}
-                  >
+                  <select id="bhk" value={bhk} onChange={e => setBhk(e.target.value)} className={INPUT} style={{ color: '#111' }}>
                     <option value="">Any</option>
                     <option value="2">2 BHK</option>
                     <option value="3">3 BHK</option>
@@ -258,13 +252,7 @@ export default function HomeSearch() {
 
                 <div>
                   <label htmlFor="ptype" className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
-                  <select
-                    id="ptype"
-                    value={ptype}
-                    onChange={e => setPtype(e.target.value)}
-                    className={INPUT}
-                    style={{ color: '#111' }}
-                  >
+                  <select id="ptype" value={ptype} onChange={e => setPtype(e.target.value)} className={INPUT} style={{ color: '#111' }}>
                     <option value="">All Types</option>
                     {PTYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -293,10 +281,7 @@ export default function HomeSearch() {
                 )}
                 <div className="ml-auto flex gap-3">
                   <button onClick={clearAll} className="text-sm text-gray-600 hover:text-brand-600">Clear</button>
-                  <button
-                    onClick={go}
-                    className="px-4 py-2 bg-navy-900 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold"
-                  >
+                  <button onClick={go} className="px-4 py-2 bg-navy-900 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold">
                     Apply & Search
                   </button>
                 </div>
@@ -307,10 +292,7 @@ export default function HomeSearch() {
 
         {/* Search button (compact row) */}
         <div className="flex items-end">
-          <button
-            onClick={go}
-            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
-          >
+          <button onClick={go} className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
             Search
           </button>
         </div>
