@@ -15,7 +15,7 @@ export default function About() {
           <div>
             <div className="mb-8">
               <h2 className="text-4xl md:text-5xl font-serif font-bold text-navy-900 mb-4">
-                About <span className="text-brand-600">Me</span>
+                About <span className="text-brand-600">Us</span>
               </h2>
               <div className="w-20 h-1 bg-brand-600"></div>
             </div>
