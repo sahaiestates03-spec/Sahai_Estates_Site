@@ -9,17 +9,17 @@ export default function HomePage() {
   return (
     <div>
       <RotatingHero
-        images={[
-          "/public/BG-IMG-1.jpg",
-          "/public/BG-IMG-2.jpg",
-          "/public/BG-IMG-3.jpg",
-          "/public/BG-IMG-4.jpg",
-          "/public/BG-IMG-5.jpg",
-        ]}
-        interval={6000} // 6 seconds — change if needed
-      >
-        <Hero /> {/* ✅ Your existing hero content stays inside */}
-      </RotatingHero>
+  images={[
+    "/BG-IMG-1.jpg",
+    "/BG-IMG-2.jpg",
+    "/BG-IMG-3.jpg",
+    "/BG-IMG-4.jpg",
+    "/BG-IMG-5.jpg",
+  ]}
+  interval={6000}
+>
+  <Hero />
+</RotatingHero>
 
       <FeaturedProperties />
       <About />
