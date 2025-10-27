@@ -3,7 +3,7 @@ import HomeSearch from './HomeSearch';
 
 export default function Hero() {
   return (
-    <section className="relative pt-28 pb-12 text-white">
+    <section className="relative pt-28 pb-40 md:pb-32 lg:pb-28 text-white">
       {/* Background is handled by <RotatingHero /> */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,7 +44,7 @@ export default function Hero() {
         </div>
 
         {/* Search panel */}
-        <div className="mt-10 -mb-14 relative z-20">
+        <div className="mt-10 relative z-30">
           <HomeSearch />
         </div>
       </div>
