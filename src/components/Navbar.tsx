@@ -14,6 +14,14 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
+      {/* ✨ Simple keyframes for the menu animation */}
+      <style>{`
+        @keyframes menuFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0);   }
+        }
+      `}</style>
+
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
@@ -24,7 +32,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-1">
           <NavLink to="/" className={linkClasses}>Home</NavLink>
 
-          {/* Properties dropdown with hover-bridge */}
+          {/* Properties dropdown with hover-bridge + animation */}
           <div
             className="relative"
             onMouseEnter={() => setPropsOpen(true)}
@@ -47,7 +55,9 @@ export default function Navbar() {
                   onMouseEnter={() => setPropsOpen(true)}
                 />
                 <div
-                  className="absolute left-0 top-full mt-2 w-[520px] bg-white shadow-xl border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 z-50"
+                  className="absolute left-0 top-full mt-2 w-[520px] bg-white shadow-xl border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 z-50
+                             will-change-transform"
+                  style={{ animation: 'menuFadeIn 160ms ease-out' }}   // ✨ animation
                   role="menu"
                 >
                   {/* Residential */}
@@ -108,7 +118,6 @@ export default function Navbar() {
                       className="inline-block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
                       onClick={() => setPropsOpen(false)}
                     >
-                      {/* label only changed */}
                       New Launch
                     </NavLink>
                   </div>
