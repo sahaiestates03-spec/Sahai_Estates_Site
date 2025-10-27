@@ -1,14 +1,8 @@
-import HomeSearch from './HomeSearch';
-import { Link } from 'react-router-dom';
-
 export default function Hero() {
   return (
     <section className="relative pt-28 pb-12 text-white">
-      {/* OPTIONAL: background image overlay */}
-      <div className="absolute inset-0 -z-10">
-        <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-navy-900/60" />
-      </div>
+      {/* ❌ REMOVE old static background completely */}
+      {/* ✅ Let RotatingHero handle the background */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl md:text-6xl font-serif font-bold leading-tight">
@@ -27,7 +21,6 @@ export default function Hero() {
           </Link>
         </div>
 
-        {/* ⬇️ NEW search panel */}
         <div className="mt-8">
           <HomeSearch />
         </div>
