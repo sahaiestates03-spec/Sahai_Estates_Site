@@ -1,7 +1,7 @@
 export default function Hero() {
   return (
     <section className="relative pt-28 pb-12 text-white">
-      {/* ❌ REMOVE old static background completely */}
+    
       {/* ✅ Let RotatingHero handle the background */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
