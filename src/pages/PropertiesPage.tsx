@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 
-// IMPORTANT: adjust this import if your data export name differs
-// Expected structure is flexible (we check existence before comparing)
+// Data
 import * as DATA from '../data/mockData';
+
+// ✅ Use your card component
+import PropertyCard from '../components/PropertyCard';
 
 type QFor = 'resale' | 'rent' | 'under-construction';
 type QSegment = 'residential' | 'commercial';
@@ -137,47 +139,10 @@ export default function PropertiesPage() {
           )}
         </div>
 
-        {/* Results grid */}
+        {/* Results grid -> use PropertyCard */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((p, i) => (
-            <article key={p?.id ?? i} className="rounded-xl border bg-white shadow-sm overflow-hidden">
-              <div className="aspect-[4/3] bg-gray-100">
-                {/* Try common image fields gracefully */}
-                {/* eslint-disable-next-line jsx-a11y/img-redundant-alt */}
-                <img
-                  src={p?.cover || p?.image || p?.images?.[0] || '/placeholder.jpg'}
-                  alt={p?.title || 'Property image'}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-navy-900 line-clamp-1">
-                  {p?.title || p?.name || 'Property'}
-                </h3>
-                <p className="text-sm text-gray-600 line-clamp-1">
-                  {p?.location || p?.area || p?.address || 'South Mumbai'}
-                </p>
-                <div className="mt-2 text-sm text-gray-700">
-                  {p?.bhk ? <span className="mr-3">{p.bhk} BHK</span> : null}
-                  {p?.type ? <span className="mr-3">{p.type}</span> : null}
-                  {p?.segment ? <span className="mr-3 capitalize">{p.segment}</span> : null}
-                  {p?.status ? <span className="mr-3 capitalize">{p.status}</span> : null}
-                </div>
-                <div className="mt-3 font-semibold text-navy-900">
-                  {typeof p?.price === 'number' ? `₹ ${formatINR(p.price)}` : p?.price || 'Price on request'}
-                </div>
-
-                {/* Details link (if you have /properties/:id route) */}
-                {p?.id ? (
-                  <Link
-                    to={`/properties/${p.id}`}
-                    className="mt-3 inline-flex text-sm text-brand-600 hover:underline"
-                  >
-                    View details →
-                  </Link>
-                ) : null}
-              </div>
-            </article>
+            <PropertyCard key={p?.id ?? i} property={p} />
           ))}
         </div>
 
