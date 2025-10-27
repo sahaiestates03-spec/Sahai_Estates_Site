@@ -1,30 +1,35 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
+
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
 import PropertiesPage from './pages/PropertiesPage';
-import ContactPage from './pages/ContactPage';
 import PropertyDetailsPage from './pages/PropertyDetailsPage';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
+import ContactPage from './pages/ContactPage';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 
 export default function App() {
   return (
     <HashRouter>
-      import ScrollToTop from './components/ScrollToTop';
+      <ScrollToTop />      {/* ✅ yahi mount rahe */}
       <Navbar />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/properties" element={<PropertiesPage />} />
-        <Route path="/properties/:id" element={<PropertyDetailsPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:slug" element={<BlogPost />} />
-      </Routes>
+      {/* optional but recommended: wrap content in a scroll container */}
+      <main id="scroll-root" className="min-h-screen pt-16">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/properties/:id" element={<PropertyDetailsPage />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+        </Routes>
+      </main>
       <Footer />
     </HashRouter>
   );
