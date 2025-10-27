@@ -30,10 +30,10 @@ export default function RotatingHero({
   }, [validImages, images, interval]);
 
   return (
-    <section className={`relative w-full ${heightClass} overflow-hidden`}>
+    <section className={`relative w-full ${heightClass} overflow-visible`}>
       {/* Background layer */}
       {validImages ? (
-        <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 -z-10 overflow-hidden">
           <div
             className="flex h-full w-full transition-transform duration-700 ease-out"
             style={{ transform: `translateX(-${index * 100}%)` }}
