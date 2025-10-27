@@ -26,10 +26,11 @@ export default function Navbar() {
 
           {/* Properties dropdown (desktop) */}
           <div
-            className="relative"
-            onMouseEnter={() => setPropsOpen(true)}
-            onMouseLeave={() => setPropsOpen(false)}
-          >
+  className="relative"
+  onMouseEnter={() => setPropsOpen(true)}
+  onMouseLeave={() => setPropsOpen(false)}
+  style={{ paddingBottom: '12px' }} // ✅ invisible hover padding
+>
             <button
               className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-600 inline-flex items-center gap-1"
               aria-haspopup="menu"
@@ -42,7 +43,7 @@ export default function Navbar() {
             {/* Menu */}
             {propsOpen && (
               <div
-                className="absolute left-0 mt-2 w-[520px] bg-white shadow-xl border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 z-50"
+                className="absolute left-0 mt-0 translate-y-[10px] w-[520px] bg-white shadow-xl border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 z-50"
                 role="menu"
               >
                 {/* Residential */}
