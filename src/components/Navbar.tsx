@@ -4,8 +4,8 @@ import { ChevronDown } from 'lucide-react';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const [propsOpen, setPropsOpen] = useState(false); // desktop hover guard
-  const [propsOpenMobile, setPropsOpenMobile] = useState(false); // mobile accordion
+  const [propsOpen, setPropsOpen] = useState(false);
+  const [propsOpenMobile, setPropsOpenMobile] = useState(false);
 
   const linkClasses = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -20,94 +20,100 @@ export default function Navbar() {
           <img src="/Sahai Estates 131.png" alt="Sahai Estates" className="h-7 w-auto" />
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop */}
         <div className="hidden md:flex items-center gap-1">
           <NavLink to="/" className={linkClasses}>Home</NavLink>
 
-          {/* Properties dropdown (desktop) */}
+          {/* Properties dropdown with hover-bridge */}
           <div
-          className="relative"
-          onMouseEnter={() => setPropsOpen(true)}
-          onMouseLeave={() => setPropsOpen(false)}
->
+            className="relative"
+            onMouseEnter={() => setPropsOpen(true)}
+            onMouseLeave={() => setPropsOpen(false)}
+          >
             <button
-            className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-600 inline-flex items-center gap-1"
-            aria-haspopup="menu"
-            aria-expanded={propsOpen}
-  >
+              className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-600 inline-flex items-center gap-1"
+              aria-haspopup="menu"
+              aria-expanded={propsOpen}
+            >
               Properties
               <ChevronDown size={16} className={`transition-transform ${propsOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Menu */}
             {propsOpen && (
-            <>
-              {/* 🔥 Invisible hover bridge to prevent gap */}
-              <div
-                className="absolute left-0 right-0 top-full h-3"
-                onMouseEnter={() => setPropsOpen(true)}
-              />
-              <div
-                className="absolute left-0 top-full mt-2 w-[520px] bg-white shadow-xl border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 z-50"
-                role="menu"
-              >
-                {/* Residential */}
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Residential</div>
-                  <ul className="space-y-1">
-                    <li>
-                      <NavLink
-                        to="/properties?segment=residential&for=resale"
-                        className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                      >
-                        Buy
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        to="/properties?segment=residential&for=rent"
-                        className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                      >
-                        Rent
-                      </NavLink>
-                    </li>
-                  </ul>
-                </div>
+              <>
+                {/* Invisible hover bridge – prevents flicker when moving from button to menu */}
+                <div
+                  className="absolute left-0 right-0 top-full h-3"
+                  onMouseEnter={() => setPropsOpen(true)}
+                />
+                <div
+                  className="absolute left-0 top-full mt-2 w-[520px] bg-white shadow-xl border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 z-50"
+                  role="menu"
+                >
+                  {/* Residential */}
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Residential</div>
+                    <ul className="space-y-1">
+                      <li>
+                        <NavLink
+                          to="/properties?segment=residential&for=resale"
+                          className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
+                          onClick={() => setPropsOpen(false)}
+                        >
+                          Buy
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink
+                          to="/properties?segment=residential&for=rent"
+                          className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
+                          onClick={() => setPropsOpen(false)}
+                        >
+                          Rent
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </div>
 
-                {/* Commercial */}
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Commercial</div>
-                  <ul className="space-y-1">
-                    <li>
-                      <NavLink
-                        to="/properties?segment=commercial&for=resale"
-                        className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                      >
-                        Buy
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        to="/properties?segment=commercial&for=rent"
-                        className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                      >
-                        Rent
-                      </NavLink>
-                    </li>
-                  </ul>
-                </div>
+                  {/* Commercial */}
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Commercial</div>
+                    <ul className="space-y-1">
+                      <li>
+                        <NavLink
+                          to="/properties?segment=commercial&for=resale"
+                          className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
+                          onClick={() => setPropsOpen(false)}
+                        >
+                          Buy
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink
+                          to="/properties?segment=commercial&for=rent"
+                          className="block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
+                          onClick={() => setPropsOpen(false)}
+                        >
+                          Rent
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </div>
 
-                {/* Under Construction (full row) */}
-                <div className="col-span-2 border-t pt-3">
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Project Status</div>
-                  <NavLink
-                    to="/properties?for=under-construction"
-                    className="inline-block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                  >
-                    Under Construction
-                  </NavLink>
+                  {/* Project status */}
+                  <div className="col-span-2 border-t pt-3">
+                    <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Project Status</div>
+                    <NavLink
+                      to="/properties?for=under-construction"
+                      className="inline-block rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
+                      onClick={() => setPropsOpen(false)}
+                    >
+                      {/* label only changed */}
+                      New Launch
+                    </NavLink>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -140,7 +146,7 @@ export default function Navbar() {
           <div className="px-4 py-3 space-y-1">
             <NavLink to="/" className={linkClasses} onClick={() => setOpen(false)}>Home</NavLink>
 
-            {/* Properties accordion (mobile) */}
+            {/* Properties accordion */}
             <div className="border rounded-md">
               <button
                 className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700"
@@ -190,7 +196,7 @@ export default function Navbar() {
                     className={linkClasses}
                     onClick={() => setOpen(false)}
                   >
-                    Under Construction
+                    New Launch
                   </NavLink>
                 </div>
               )}
