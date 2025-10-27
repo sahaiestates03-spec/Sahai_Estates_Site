@@ -13,6 +13,7 @@ import BlogPost from "./pages/BlogPost";
 export default function App() {
   return (
     <HashRouter>
+      import ScrollToTop from './components/ScrollToTop';
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
