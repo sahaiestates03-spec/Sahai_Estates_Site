@@ -44,7 +44,7 @@ export default function Hero() {
         </div>
 
         {/* Search panel */}
-        <div className="mt-10 relative z-30">
+        <div className="mt-10 relative z-50">
           <HomeSearch />
         </div>
       </div>
