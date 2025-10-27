@@ -39,68 +39,109 @@ export default function PropertiesPage() {
     [];
 
   const filtered = useMemo(() => {
-  const mapStatus = (raw?: any) => {
-    if (!raw) return undefined;
-    const s = String(raw).toLowerCase().trim();
-    if (/(buy|sale|sell|for sale|ready to move)/i.test(s)) return 'resale';
-    if (/(rent|lease)/i.test(s)) return 'rent';
-    if (/(under.?construction|new launch|launch)/i.test(s)) return 'under-construction';
-    return s;
+  // helpers
+  const lc = (v: any) => (v == null ? '' : String(v).toLowerCase().trim());
+
+  const mapStatus = (raw?: any): 'resale' | 'rent' | 'under-construction' | undefined => {
+    const s = lc(raw);
+    if (!s) return undefined;
+    if (/(rent|lease|to let|for rent)/i.test(s)) return 'rent';
+    if (/(under.?construction|new\s*launch|pre.?launch|launch)/i.test(s)) return 'under-construction';
+    if (/(buy|sale|sell|for\s*sale|ready\s*to\s*move|available|possession)/i.test(s)) return 'resale';
+    return undefined; // unknown → don’t block
   };
 
-  const guessSegment = (p: any) => {
-    if (p?.segment) return String(p.segment).toLowerCase();
-    // Guess by type – office/retail => commercial, otherwise residential
-    const t = String(p?.type ?? '').toLowerCase();
+  const mapSegment = (p: any): 'residential' | 'commercial' | undefined => {
+    const s =
+      lc(p?.segment) ||
+      lc(p?.category) ||
+      lc(p?.segmentType) ||
+      lc(p?.propertySegment) ||
+      lc(p?.usage);
+
+    if (s.includes('commercial')) return 'commercial';
+    if (s.includes('residential')) return 'residential';
+
+    // Guess by type keywords when segment missing
+    const t = lc(p?.type) || lc(p?.propertyType);
     if (/(office|retail|shop|commercial)/.test(t)) return 'commercial';
-    return undefined; // keep undefined so it doesn't block
+    if (t) return 'residential'; // default guess if a type exists
+
+    return undefined; // unknown → don’t block
+  };
+
+  const numFromAny = (v: any) => {
+    if (typeof v === 'number') return v;
+    const n = Number(String(v ?? '').replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : undefined;
   };
 
   return all.filter((p) => {
-    // Segment (relaxed includes)
+    // SEGMENT (only block if we can determine the property's segment and it differs)
     if (q.segment) {
-      const seg = guessSegment(p);
-      if (p?.segment || seg) {
-        const value = String(p?.segment ?? seg ?? '').toLowerCase();
-        if (!value.includes(q.segment)) return false;
-      }
+      const seg = mapSegment(p);
+      if (seg && seg !== q.segment) return false;
     }
 
-    // For (status mapping)
+    // STATUS (forWhat) (only block if we can map it and it differs)
     if (q.forWhat) {
       const raw =
-        p?.status ?? p?.for ?? p?.listingType ?? p?.saleType ?? p?.availability ?? undefined;
+        p?.status ??
+        p?.for ??
+        p?.listingType ??
+        p?.saleType ??
+        p?.availability ??
+        p?.projectStatus ??
+        p?.stage ??
+        undefined;
+
       const st = mapStatus(raw);
-      // Only block if we have a mapped status and it mismatches
       if (st && st !== q.forWhat) return false;
     }
 
-    // Location includes
-    if (q.location && p?.location && !String(p.location).toLowerCase().includes(q.location.toLowerCase()))
-      return false;
+    // LOCATION (match against common fields; if none exist we don't block)
+    if (q.location) {
+      const needles = lc(q.location);
+      const hay =
+        lc(p?.location) ||
+        lc(p?.locality) ||
+        lc(p?.area) ||
+        lc(p?.address) ||
+        '';
+      if (hay && !hay.includes(needles)) return false;
+    }
 
-    // Price range
-    if ((q.min !== undefined || q.max !== undefined)) {
+    // PRICE range (accept price from various fields/strings)
+    if (q.min !== undefined || q.max !== undefined) {
       const price =
-        typeof p?.price === 'number'
-          ? p.price
-          : Number(String(p?.price ?? '').replace(/[^0-9]/g, '') || NaN);
-      if (Number.isFinite(price)) {
+        numFromAny(p?.price) ??
+        numFromAny(p?.priceInr) ??
+        numFromAny(p?.amount) ??
+        numFromAny(p?.rate);
+      if (price !== undefined) {
         if (q.min !== undefined && price < q.min) return false;
         if (q.max !== undefined && price > q.max) return false;
       }
     }
 
-    // BHK exact when present
-    if (q.bhk && (p?.bhk !== undefined && String(p.bhk) !== q.bhk)) return false;
+    // BHK (match if property has a bhk/bedrooms number)
+    if (q.bhk) {
+      const bhk =
+        p?.bhk ??
+        p?.bedrooms ??
+        numFromAny((lc(p?.configuration).match(/\d+/) || [])[0]);
+      if (bhk !== undefined && String(bhk) !== q.bhk) return false;
+    }
 
-    // Property type exact when present
-    if (q.ptype && p?.type && String(p.type).toLowerCase() !== q.ptype.toLowerCase()) return false;
+    // TYPE (only block when property exposes a type)
+    if (q.ptype) {
+      const pt = lc(p?.type || p?.propertyType);
+      if (pt && pt !== lc(q.ptype)) return false;
+    }
 
-    return true;
+    return true; // keep item
   });
 }, [all, q]);
-
 
   // Helpers to update/remove params
   const removeParam = (key: string) => {
