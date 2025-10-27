@@ -6,36 +6,36 @@ export default function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
   useLayoutEffect(() => {
-    // Make SPA always control scroll
+    // Disable browser's native restoration
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
 
-    // If there is an in-page anchor (#id), scroll to that element
-    if (hash) {
-      const id = decodeURIComponent(hash.replace('#', ''));
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ block: 'start' });
-        return;
+    const scrollNow = () => {
+      // If there's an in-page #anchor, go there
+      if (hash) {
+        const id = decodeURIComponent(hash.replace('#', ''));
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ block: 'start' });
+          return;
+        }
       }
-    }
 
-    const scrollToTop = () => {
-      // Try all common scroll targets
+      // Try all common targets
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
 
-      // If you use a custom scroll container, it will be handled in Step 3
+      // If you use a custom scroll container, give it id="scroll-root"
       const scroller = document.getElementById('scroll-root');
       if (scroller) scroller.scrollTop = 0;
     };
 
-    // Immediately + after paint (some layouts mount async)
-    scrollToTop();
-    const id2 = setTimeout(scrollToTop, 0);
-    return () => clearTimeout(id2);
+    // Run immediately + after paint (to beat late-mounted layouts)
+    scrollNow();
+    requestAnimationFrame(scrollNow);
+    setTimeout(scrollNow, 0);
   }, [pathname, hash]);
 
   return null;
