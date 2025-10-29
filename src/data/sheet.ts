@@ -165,39 +165,74 @@ function bool(v?: string) {
   return t === 'true' || t === '1' || t === 'yes'
 }
 
+// src/data/sheet.ts
+
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w]+/g, '-')     // non-word -> hyphen
+    .replace(/^-+|-+$/g, '');    // trim hyphens
+}
+
+function cleanNum(v?: string) {
+  if (!v) return undefined;
+  const n = Number(String(v).replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// ... keep parsePrice, splitList, normalizeImages, etc. as you already have ...
+
 function mapRow(r: RawRow): PropertyRow | null {
   const get = (k: string) =>
     r[k] ??
     r[k.toLowerCase()] ??
-    r[k.replace(/\s+/g, '').toLowerCase()]
+    r[k.replace(/\s+/g, '').toLowerCase()] ??
+    undefined;
 
-  const id = (get('id') as string) || crypto.randomUUID()
-  const title = (get('title') as string) || 'Property'
-  const segment = normalizeSegment(get('segment') as string)
+  const title = ((get('title') as string) || (get('name') as string) || 'Property').trim();
+  const idCell = (get('id') as string) || '';
+  const id = idCell.trim() || slugify(title);   // <- fallback to slug if id is missing
+
+  const segment = normalizeSegment(get('segment') as string);
   const listingFor = normalizeFor(
     (get('listingFor') as string) ||
-      (get('for') as string) ||
-      (get('status') as string)
-  )
+    (get('for') as string) ||
+    (get('status') as string)
+  );
+
+  const description = (get('description') as string) || undefined;
+  const location = (get('location') as string) || undefined;
+  const areaLocality = (get('areaLocality') as string) || undefined;
+  const propertyType = (get('propertyType') as string) || undefined;
+  const amenities = splitList(get('amenities') as string);
+  const images = normalizeImages(get('images') as string);
+  const isFeatured = ['true', '1', 'yes'].includes(((get('isFeatured') as string) || '').toLowerCase());
+
+  const price = parsePrice(get('price') as string);
+  const bedrooms = cleanNum(get('bedrooms') as string);
+  const bathrooms = cleanNum(get('bathrooms') as string);
+  const areaSqft = cleanNum(get('areaSqft') as string);
 
   return {
     id,
     title,
+    description,
     segment,
     listingFor,
-    description: get('description') as string,
-    location: get('location') as string,
-    areaLocality: get('arealocality') as string,
-    price: parsePrice(get('price') as string),
-    bedrooms: cleanNum(get('bedrooms') as string),
-    bathrooms: cleanNum(get('bathrooms') as string),
-    areaSqft: cleanNum(get('areasqft') as string),
-    propertyType: get('propertytype') as string,
-    amenities: splitList(get('amenities') as string),
-    images: normalizeImages(get('images') as string),
-    isFeatured: bool(get('isFeatured') as string),
-  }
+    location,
+    areaLocality,
+    price,
+    bedrooms: bedrooms ? Math.round(bedrooms) : undefined,
+    bathrooms: bathrooms ? Math.round(bathrooms) : undefined,
+    areaSqft: areaSqft ? Math.round(areaSqft) : undefined,
+    propertyType,
+    amenities,
+    images,
+    isFeatured,
+  };
 }
+
 
 let cache: { at: number; data: PropertyRow[] } | null = null
 
