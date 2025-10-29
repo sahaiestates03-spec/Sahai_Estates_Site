@@ -1,8 +1,7 @@
 // src/data/sheet.ts
-// Reads properties from a Google Sheet (published as CSV) and maps into the
-// shape your site already understands. Falls back handled in PropertiesPage.
+type RawRow = Record<string, string | undefined>;
 
-export type SheetProperty = {
+export type PropertyRow = {
   id: string;
   title: string;
   description?: string;
@@ -11,131 +10,170 @@ export type SheetProperty = {
   status?: string;
   location?: string;
   areaLocality?: string;
-  price?: number;
-  bedrooms?: number; // we will expose bhk for filters
+  price?: number; // rupees
+  bedrooms?: number;
   bathrooms?: number;
   areaSqft?: number;
-  propertyType?: string; // we will expose type from this
+  propertyType?: string;
   amenities?: string[];
-  images?: string[];
+  images?: string[]; // first one is card cover
   isFeatured?: boolean;
 };
 
 const SHEET_ID = import.meta.env.VITE_SHEET_ID;
-const GID = import.meta.env.VITE_SHEET_GID ?? '0';
-const CACHE_MIN = Number(import.meta.env.VITE_SHEET_CACHE_MIN ?? '10');
+const GID = import.meta.env.VITE_SHEET_GID || '0';
+const CACHE_MIN = Number(import.meta.env.VITE_SHEET_CACHE_MIN || 10);
 
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+const CSV_URLS = [
+  // normal export
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`,
+  // gviz export (more CORS-friendly)
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`,
+  // publish-to-web export
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?output=csv&gid=${GID}`,
+];
 
-const CACHE_KEY = 'sheet_properties_cache_v2';
-const CACHE_AT = 'sheet_properties_cache_at_v2';
+const LOCAL_PREFIX = '/prop-pics/';
 
-const lc = (v: any) => (v == null ? '' : String(v).toLowerCase().trim());
-const parseNum = (v?: string) => {
+function cleanNum(v?: string) {
   if (!v) return undefined;
-  const n = Number((v + '').replace(/[^0-9.]/g, ''));
-  return Number.isFinite(n) ? n : undefined;
-};
-const parseBool = (v?: string) => {
-  const s = lc(v);
-  return s === 'true' || s === '1' || s === 'yes';
-};
+  const n = Number(String(v).replace(/[^\d]/g, '')); // remove commas, spaces, ₹
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
 
-function statusToFor(status?: string, listingFor?: string): 'resale' | 'rent' | 'under-construction' | undefined {
-  // listingFor wins; otherwise infer from status
-  const lf = lc(listingFor);
-  if (/(rent|lease)/.test(lf)) return 'rent';
-  if (/(under.?construction|new\s*launch|pre.?launch)/.test(lf)) return 'under-construction';
-  if (lf) return lf as any;
+function toInt(v?: string) {
+  const n = cleanNum(v);
+  return n ? Math.round(n) : undefined;
+}
 
-  const s = lc(status);
-  if (/(rent|lease)/.test(s)) return 'rent';
-  if (/(under.?construction|new\s*launch|pre.?launch)/.test(s)) return 'under-construction';
-  if (/(sale|sell|buy|ready\s*to\s*move|available|possession)/.test(s)) return 'resale';
+function toFloat(v?: string) {
+  const n = cleanNum(v);
+  return n ? n : undefined;
+}
+
+function parseCSV(text: string): RawRow[] {
+  // simple CSV; Google Sheets CSV is safe (no crazy quotes in your sheet)
+  const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
+  const headers = headerLine.split(',').map((h) => h.trim().toLowerCase());
+  return lines.map((l) => {
+    const cells = l.split(','); // OK for our sheet
+    const row: RawRow = {};
+    headers.forEach((h, i) => (row[h] = (cells[i] ?? '').trim()));
+    return row;
+  });
+}
+
+function normalizeSegment(s?: string) {
+  if (!s) return undefined;
+  const t = s.toLowerCase();
+  if (t.includes('res')) return 'residential';
+  if (t.includes('com') || t.includes('office')) return 'commercial';
   return undefined;
 }
 
-export async function fetchSheetProperties(): Promise<any[]> {
-  if (!SHEET_ID) return [];
+function normalizeFor(s?: string) {
+  if (!s) return undefined;
+  const t = s.toLowerCase();
+  if (t.includes('rent') || t.includes('lease')) return 'rent';
+  if (t.includes('launch') || t.includes('under') || t === 'uc') return 'under-construction';
+  if (t.includes('sale') || t.includes('resale') || t.includes('buy')) return 'resale';
+  return undefined;
+}
 
-  // Try localStorage cache first
-  try {
-    const at = localStorage.getItem(CACHE_AT);
-    const json = localStorage.getItem(CACHE_KEY);
-    if (at && json) {
-      const ageMin = (Date.now() - Number(at)) / 60000;
-      if (ageMin < CACHE_MIN) return JSON.parse(json);
-    }
-  } catch {}
+function splitList(v?: string) {
+  if (!v) return [];
+  return v
+    .split(/[|,]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
 
-  const res = await fetch(CSV_URL, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Sheet fetch failed');
-  const csv = await res.text();
-
-  const lines = csv.split(/\r?\n/).filter(Boolean);
-  if (!lines.length) return [];
-
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const rows = lines.slice(1);
-
-  const items: any[] = rows.map((line) => {
-    // Basic CSV split. If you later need fully robust parsing, we can swap to PapaParse.
-    const cols = line.split(',');
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => (row[h] = (cols[i] ?? '').trim()));
-
-    const imgList = row['images']
-      ? row['images'].split('|').join(',').split(',').map(s => s.trim()).filter(Boolean)
-      : undefined;
-
-    const amenList = row['amenities']
-      ? row['amenities'].split('|').join(',').split(',').map(s => s.trim()).filter(Boolean)
-      : undefined;
-
-    const obj: SheetProperty = {
-      id: row['id'] || crypto.randomUUID(),
-      title: row['title'] || 'Property',
-      description: row['description'],
-      segment: ((): any => {
-        const s = lc(row['segment']);
-        if (s.includes('commercial')) return 'commercial';
-        if (s.includes('residential')) return 'residential';
-        return undefined;
-      })(),
-      listingFor: statusToFor(row['status'], row['listingfor']),
-      status: row['status'],
-      location: row['location'],
-      areaLocality: row['arealocality'],
-      price: parseNum(row['price']),
-      bedrooms: parseNum(row['bedrooms']),
-      bathrooms: parseNum(row['bathrooms']),
-      areaSqft: parseNum(row['areasqft']),
-      propertyType: row['propertytype'],
-      amenities: amenList,
-      images: imgList,
-      isFeatured: parseBool(row['isfeatured']),
-    };
-
-    // Normalize for the site (filters & cards)
-    const normalized: any = {
-      ...obj,
-      bhk: obj.bedrooms,
-      type: obj.propertyType,
-      cover: obj.images?.[0],
-      // Filters expect "segment" & "status" (resale/rent/under-construction)
-      segment: obj.segment,
-      status: obj.listingFor,
-      // Prefer location → areaLocality fallback
-      location: obj.location || obj.areaLocality || '',
-    };
-
-    return normalized;
+function normalizeImages(v?: string) {
+  const arr = splitList(v);
+  return arr.map((x) => {
+    if (x.startsWith('http://') || x.startsWith('https://') || x.startsWith('/')) return x;
+    // treat as file in /public/prop-pics
+    return LOCAL_PREFIX + x;
   });
+}
 
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(items));
-    localStorage.setItem(CACHE_AT, String(Date.now()));
-  } catch {}
+function bool(v?: string) {
+  if (!v) return false;
+  const t = v.toLowerCase();
+  return t === 'true' || t === '1' || t === 'yes';
+}
 
-  return items;
+function mapRow(r: RawRow): PropertyRow | null {
+  // Accept flexible headers
+  const get = (k: string) =>
+    r[k] ??
+    r[k.toLowerCase()] ??
+    r[k.replace(/\s+/g, '').toLowerCase()] ??
+    undefined;
+
+  const id = (get('id') as string) || crypto.randomUUID();
+  const title = (get('title') as string) || (get('name') as string) || 'Property';
+
+  const segment = normalizeSegment(get('segment') as string);
+  const listingFor = normalizeFor(
+    (get('listingFor') as string) ||
+    (get('for') as string) ||
+    (get('status') as string)
+  );
+
+  const description = (get('description') as string) || undefined;
+  const location = (get('location') as string) || undefined;
+  const areaLocality = (get('areaLocality') as string) || undefined;
+  const propertyType = (get('propertyType') as string) || undefined;
+  const amenities = splitList(get('amenities') as string);
+  const images = normalizeImages(get('images') as string);
+  const isFeatured = bool(get('isFeatured') as string);
+
+  const price = toFloat(get('price') as string); // in rupees
+  const bedrooms = cleanNum(get('bedrooms') as string) ? Number(cleanNum(get('bedrooms') as string)) : undefined;
+  const bathrooms = cleanNum(get('bathrooms') as string) ? Number(cleanNum(get('bathrooms') as string)) : undefined;
+  const areaSqft = cleanNum(get('areaSqft') as string) ? Number(cleanNum(get('areaSqft') as string)) : undefined;
+
+  return {
+    id,
+    title,
+    description,
+    segment,
+    listingFor,
+    location,
+    areaLocality,
+    price,
+    bedrooms,
+    bathrooms,
+    areaSqft,
+    propertyType,
+    amenities,
+    images,
+    isFeatured,
+  };
+}
+
+let cache: { at: number; data: PropertyRow[] } | null = null;
+
+export async function fetchSheet(): Promise<PropertyRow[]> {
+  const now = Date.now();
+  if (cache && now - cache.at < CACHE_MIN * 60_000) return cache.data;
+
+  let lastErr: unknown;
+  for (const url of CSV_URLS) {
+    try {
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      const rows = parseCSV(text)
+        .map(mapRow)
+        .filter((x): x is PropertyRow => !!x);
+      cache = { at: Date.now(), data: rows };
+      return rows;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  console.warn('Could not load Sheet. Using fallback data.', lastErr);
+  return []; // PropertiesPage already shows a red note in this case
 }
