@@ -58,15 +58,75 @@ function cleanNum(v?: string) {
 }
 
 function parseCSV(text: string): RawRow[] {
-  const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean)
-  const headers = headerLine.split(',').map((h) => h.trim().toLowerCase())
-  return lines.map((l) => {
-    const cells = l.split(',')
-    const row: RawRow = {}
-    headers.forEach((h, i) => (row[h] = (cells[i] ?? '').trim()))
-    return row
-  })
+  // RFC4180-ish CSV parser that handles quotes, commas, CRLF
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (ch === '"') {
+      // Escaped quote inside a quoted cell ("")
+      if (inQuotes && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    // Comma separates cells when we are not in quotes
+    if (ch === ',' && !inQuotes) {
+      row.push(cell);
+      cell = '';
+      continue;
+    }
+
+    // Newline (CR or LF) ends the row when not in quotes
+    if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      // Push the last cell if this line had any content
+      if (cell.length || row.length) {
+        row.push(cell);
+        rows.push(row);
+        row = [];
+        cell = '';
+      }
+      // Skip the paired \n after \r\n
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      continue;
+    }
+
+    cell += ch;
+  }
+
+  // Flush any remaining cell/row
+  if (cell.length || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  if (!rows.length) return [];
+
+  // Build objects with case-insensitive headers
+  const headerLine = rows.shift()!;
+  const headers = headerLine.map(h => h.trim().toLowerCase());
+
+  return rows
+    .filter(r => r.length && r.some(x => x.trim().length))
+    .map(cols => {
+      const obj: RawRow = {};
+      headers.forEach((h, i) => {
+        // Trim surrounding spaces
+        let v = (cols[i] ?? '').trim();
+        obj[h] = v;
+      });
+      return obj;
+    });
 }
+
 
 function normalizeSegment(s?: string) {
   if (!s) return undefined
