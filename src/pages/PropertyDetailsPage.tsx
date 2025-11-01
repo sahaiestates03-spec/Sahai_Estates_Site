@@ -90,27 +90,37 @@ export default function PropertyDetailsPage() {
           </div>
 
           {/* Contact Buttons */}
-<div className="flex flex-col gap-3 mt-4">
+{/* Premium Glass Buttons */}
+<div className="space-y-3 mt-4">
+
   {/* WhatsApp */}
   <a
-    href={`https://wa.me/919920214015?text=Hi%2C%20I%27m%20interested%20in%20${property.title}`}
+    href={waLink}
     target="_blank"
     rel="noreferrer"
-    className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold text-lg py-3 rounded-xl shadow-md transition transform hover:scale-[1.02]"
+    className="w-full flex items-center justify-center gap-2 
+    backdrop-blur-md bg-green-600/20 border border-green-400/40 
+    hover:bg-green-500/30 transition-all py-3 rounded-xl font-semibold 
+    text-green-600 hover:text-green-700 shadow-lg hover:shadow-green-500/30"
   >
-    <MessageCircle size={20} strokeWidth={2.4} /> 
-    <span>Chat on WhatsApp</span>
+    <MessageCircle size={20} className="text-green-500" />
+    WhatsApp
   </a>
 
-  {/* Call Button */}
+  {/* Call */}
   <a
     href="tel:+919920214015"
-    className="flex items-center justify-center gap-3 bg-[#0B2447] hover:bg-[#092135] text-white font-semibold text-lg py-3 rounded-xl shadow-md transition transform hover:scale-[1.02]"
+    className="w-full flex items-center justify-center gap-2 
+    backdrop-blur-md bg-black/20 border border-black/40 
+    hover:bg-black/40 transition-all py-3 rounded-xl font-semibold 
+    text-black hover:text-white shadow-lg hover:shadow-black/30"
   >
-    <Phone size={20} strokeWidth={2.4} /> 
-    <span>Call Sahai Estates</span>
+    <Phone size={20} className="text-black" />
+    Call Now
   </a>
+
 </div>
+
 
         </div>
       </div>
