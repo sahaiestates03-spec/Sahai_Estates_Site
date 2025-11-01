@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { priceFormat } from "../utils/price"; //
 
 type AnyProp = Record<string, any>;
 
@@ -82,8 +83,8 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         />
 
         {/* Price */}
-        <div className="absolute top-4 right-4 bg-navy-900/90 text-white px-4 py-2 rounded-lg font-bold">
-          {priceLabel}
+        <div className="text-lg font-semibold text-navy-900">
+          {priceFormat(property.price, property.listingFor)}
         </div>
 
         {/* Featured */}
