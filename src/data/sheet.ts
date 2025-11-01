@@ -177,11 +177,7 @@ function slugify(s: string) {
     .replace(/^-+|-+$/g, '');    // trim hyphens
 }
 
-function cleanNum(v?: string) {
-  if (!v) return undefined;
-  const n = Number(String(v).replace(/[^\d.]/g, ''));
-  return Number.isFinite(n) ? n : undefined;
-}
+
 
 // ... keep parsePrice, splitList, normalizeImages, etc. as you already have ...
 
