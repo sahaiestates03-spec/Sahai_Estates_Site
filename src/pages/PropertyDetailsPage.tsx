@@ -45,7 +45,7 @@ export default function PropertyDetailsPage() {
 
   const property = useMemo(() => rows.find(p => p.id === id) ?? null, [rows, id]);
 
-  if (loading) return <div className="pt-40 text-center">Loading…</div>;
+  if (loading) return <div className="pt-40 text-center text-gray-500">Loading…</div>;
 
   if (!property) {
     return (
@@ -64,7 +64,6 @@ export default function PropertyDetailsPage() {
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto p-6 space-y-6">
-
         <nav className="text-sm text-gray-500">
           <Link to="/" className="underline">Home</Link> / 
           <Link to="/properties" className="underline">Properties</Link> / 
@@ -110,10 +109,10 @@ export default function PropertyDetailsPage() {
 
           <aside className="bg-white rounded-lg shadow p-6 space-y-3 sticky top-24">
             <a href={`https://wa.me/919920214015?text=Hi%2C%20interested%20in%20${property.title}`} className="block bg-green-600 text-white py-3 rounded text-center font-semibold">
-              WhatsApp <MessageCircle className="inline" size={18}/>
+              <MessageCircle className="inline" size={18}/> WhatsApp
             </a>
             <a href="tel:+919920214015" className="block bg-navy-900 text-white py-3 rounded text-center font-semibold">
-              Call <Phone className="inline" size={18}/>
+              <Phone className="inline" size={18}/> Call
             </a>
           </aside>
         </div>
