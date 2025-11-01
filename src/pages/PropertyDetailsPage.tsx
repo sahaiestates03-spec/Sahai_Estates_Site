@@ -78,8 +78,15 @@ export default function PropertyDetailsPage() {
     [rows, id]
   );
 
-  const [i, setI] = useState(0);
-  const imgs = property?.images ?? [];
+  // which image is shown
+const [i, setI] = useState(0);
+
+// show full photo without cropping (contain) or fill the frame (cover)
+const [fit, setFit] = useState<"contain" | "cover">("contain");
+
+// be safe: remove empty image strings
+const imgs = (property.images || []).filter(Boolean);
+
 
   // ----- WhatsApp link (this is what was missing) -----
   const whatsappNumber = "919920214015"; // country code + number (no +)
@@ -143,33 +150,80 @@ export default function PropertyDetailsPage() {
         </div>
 
         {/* Gallery */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {imgs.length ? (
-            <div className="relative">
-              <img
-                src={imgs[i]}
-                className="w-full h-[420px] object-cover"
-                alt={property.title}
-              />
-              {imgs.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setI((i - 1 + imgs.length) % imgs.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white p-2 rounded shadow"
-                    aria-label="Previous image"
-                  >
-                    <ChevronLeft />
-                  </button>
-                  <button
-                    onClick={() => setI((i + 1) % imgs.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white p-2 rounded shadow"
-                    aria-label="Next image"
-                  >
-                    <ChevronRight />
-                  </button>
-                </>
-              )}
-            </div>
+<div className="bg-white rounded-2xl shadow overflow-hidden">
+  {/* Main viewer */}
+  <div className="relative aspect-[16/9] bg-black/5">
+    {imgs.length ? (
+      <img
+        src={imgs[i]}
+        alt={`${property.title} ${i + 1}`}
+        className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
+        loading="eager"
+      />
+    ) : (
+      <div className="w-full h-full grid place-items-center text-gray-500">
+        Photos coming soon
+      </div>
+    )}
+
+    {/* Prev/Next */}
+    {imgs.length > 1 && (
+      <>
+        <button
+          onClick={() => setI((prev) => (prev - 1 + imgs.length) % imgs.length)}
+          className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
+          aria-label="Previous photo"
+        >
+          <ChevronLeft />
+        </button>
+        <button
+          onClick={() => setI((prev) => (prev + 1) % imgs.length)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
+          aria-label="Next photo"
+        >
+          <ChevronRight />
+        </button>
+      </>
+    )}
+
+    {/* Fit / Fill toggle */}
+    {imgs.length > 0 && (
+      <button
+        onClick={() => setFit((f) => (f === "contain" ? "cover" : "contain"))}
+        className="absolute bottom-3 right-3 bg-white/90 hover:bg-white rounded-md px-3 py-1 text-xs font-medium shadow"
+        title={fit === "contain" ? "Switch to Fill (cover)" : "Switch to Fit (contain)"}
+      >
+        {fit === "contain" ? "Fit" : "Fill"}
+      </button>
+    )}
+  </div>
+
+  {/* Thumbnails */}
+  {imgs.length > 1 && (
+    <div className="p-3 bg-gray-50">
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+        {imgs.map((src, idx) => (
+          <button
+            key={idx}
+            onClick={() => setI(idx)}
+            className={`relative h-16 rounded-md overflow-hidden ring-2 ${
+              idx === i ? "ring-brand-500" : "ring-transparent hover:ring-gray-300"
+            }`}
+            aria-label={`Photo ${idx + 1}`}
+          >
+            <img
+              src={src}
+              alt={`thumb ${idx + 1}`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
           ) : (
             <div className="p-10 text-center text-gray-500">
               Photos coming soon
