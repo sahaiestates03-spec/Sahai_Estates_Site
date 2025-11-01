@@ -124,6 +124,26 @@ export default function PropertyDetailsPage() {
 
         </div>
       </div>
+    {/* Floating WhatsApp Button */}
+<a
+  href={waLink}
+  target="_blank"
+  rel="noreferrer"
+  className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full 
+  shadow-xl hover:scale-110 hover:bg-green-700 transition-all backdrop-blur-xl"
+>
+  <MessageCircle size={26} />
+</a>
+
+{/* Floating Call Button */}
+<a
+  href="tel:+919920214015"
+  className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full 
+  shadow-xl hover:scale-110 hover:bg-gray-800 transition-all backdrop-blur-xl"
+>
+  <Phone size={26} />
+</a>
+
     </div>
   );
 }
