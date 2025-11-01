@@ -14,9 +14,41 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function formatPrice(price?: number) {
-  return price ? `₹${(price / 1e7).toFixed(2)} Cr` : "Price on request";
+function formatINR(n: number) {
+  return n.toLocaleString("en-IN");
 }
+
+function formatPrice(
+  price?: number,
+  forWhat?: "resale" | "rent" | "under-construction"
+) {
+  if (!price || price <= 0) {
+    return forWhat === "rent" ? "₹ — / month" : "Price on request";
+  }
+
+  // RENT: show per month + Lakhs if appropriate
+  if (forWhat === "rent") {
+    if (price >= 1e5) {
+      // 1 Lakh = 1e5
+      const lakhs = price / 1e5;
+      const digits = lakhs >= 10 ? 1 : 2; // 10.0 L vs 1.25 L
+      return `${lakhs.toFixed(digits)} L / month`;
+    }
+    return `₹${formatINR(price)} / month`;
+  }
+
+  // SALE: Cr/Lakh/₹
+  if (price >= 1e7) {
+    const cr = price / 1e7;
+    return `₹${cr.toFixed(2)} Cr`;
+  }
+  if (price >= 1e5) {
+    const l = price / 1e5;
+    return `₹${l.toFixed(2)} L`;
+  }
+  return `₹${formatINR(price)}`;
+}
+
 
 export default function PropertyDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -106,7 +138,7 @@ export default function PropertyDetailsPage() {
             ) : null}
           </div>
           <span className="bg-navy-900 text-white px-4 py-2 rounded text-lg font-semibold">
-            {formatPrice(property.price)}
+            {formatPrice(property.price, property.listingFor as any)}
           </span>
         </div>
 
@@ -183,7 +215,7 @@ export default function PropertyDetailsPage() {
           {/* Enquiry Card with Glass Buttons */}
           <aside className="bg-white p-6 rounded-lg shadow h-max">
             <div className="text-2xl font-semibold mb-1">
-              {formatPrice(property.price)}
+              {formatPrice(property.price, property.listingFor as any)}
             </div>
             {property.location ? (
               <div className="text-sm text-gray-600 mb-4">
