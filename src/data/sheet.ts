@@ -53,9 +53,11 @@ function parsePrice(v?: string) {
 }
 
 function cleanNum(v?: string) {
-  if (!v) return 0
-  return Number(v.replace(/[^\d.]/g, ''))
+  if (!v) return undefined;
+  const n = Number(String(v).replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) ? n : undefined;
 }
+
 
 function parseCSV(text: string): RawRow[] {
   // RFC4180-ish CSV parser that handles quotes, commas, CRLF
