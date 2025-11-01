@@ -1,163 +1,180 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { fetchSheet, type PropertyRow } from '../data/sheet';
+// src/pages/PropertiesPage.tsx
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { fetchSheet, type PropertyRow } from "../data/sheet";
+import { properties as mock } from "../data/mockData";
 
-type QFor = 'resale' | 'rent' | 'under-construction';
-type QSegment = 'residential' | 'commercial';
+/* ---------------- Price shown on the cards ---------------- */
 
-function formatCrore(n: number) {
-  // 1 Cr = 1e7
-  const cr = n / 1e7;
-  return `${cr.toFixed(2)} Cr`;
+function inr(n: number) {
+  return n.toLocaleString("en-IN");
 }
 
+/** Uniform price for list cards – handles rent vs sale nicely */
+function priceForCard(price?: number, listingFor?: string) {
+  if (!price || price <= 0) return "Price on request";
+
+  const f = (listingFor || "").toLowerCase();
+
+  // RENT: monthly + lakhs if >= 1L
+  if (f === "rent" || f === "lease") {
+    if (price >= 1e5) {
+      const lakhs = price / 1e5;
+      const digits = lakhs >= 10 ? 1 : 2;
+      return `${lakhs.toFixed(digits)} L / month`;
+    }
+    return `₹${inr(price)} / month`;
+  }
+
+  // SALE: Cr / L / ₹
+  if (price >= 1e7) return `₹${(price / 1e7).toFixed(2)} Cr`;
+  if (price >= 1e5) return `₹${(price / 1e5).toFixed(2)} L`;
+  return `₹${inr(price)}`;
+}
+
+/* ---------------- Page ---------------- */
+
 export default function PropertiesPage() {
-  const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState<PropertyRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const segParam = (params.get("segment") || "").toLowerCase(); // residential | commercial
+  const forParam = (params.get("for") || "").toLowerCase();      // resale | rent | under-construction
 
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
-        const r = await fetchSheet();
-        setRows(r);
-        setError(null);
-      } catch (e) {
-        console.warn(e);
-        setError('Couldn’t load Sheet. Showing fallback data.');
-        setRows([]);
+        const data = await fetchSheet();
+        if (!alive) return;
+        setRows(data.length ? data : (mock as PropertyRow[]));
+      } catch {
+        setRows(mock as PropertyRow[]);
+      } finally {
+        if (alive) setLoading(false);
       }
     })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const q = useMemo(() => {
-    const segment = (params.get('segment') as QSegment | null) || undefined;
-    const forWhat = (params.get('for') as QFor | null) || undefined;
-    const location = params.get('location') || undefined;
-    const min = params.get('min') ? Number(params.get('min')) : undefined;
-    const max = params.get('max') ? Number(params.get('max')) : undefined;
-    const bhk = params.get('bhk') || undefined;
-    const ptype = params.get('ptype') || undefined;
-    return { segment, forWhat, location, min, max, bhk, ptype };
-  }, [params]);
+  const list = useMemo(() => {
+    let out = rows.slice();
 
-  const filtered = useMemo(() => {
-    return rows.filter((p) => {
-      if (q.segment && p.segment !== q.segment) return false;
-      if (q.forWhat && p.listingFor !== q.forWhat) return false;
-      if (q.location && p.location && !p.location.toLowerCase().includes(q.location.toLowerCase()))
-        return false;
-      if ((q.min !== undefined || q.max !== undefined) && typeof p.price === 'number') {
-        if (q.min !== undefined && p.price < q.min) return false;
-        if (q.max !== undefined && p.price > q.max) return false;
-      }
-      if (q.bhk && p.bedrooms && String(p.bedrooms) !== q.bhk) return false;
-      if (q.ptype && p.propertyType && p.propertyType !== q.ptype) return false;
-      return true;
+    // Apply segment filter from URL (if any)
+    if (segParam === "residential" || segParam === "commercial") {
+      out = out.filter(
+        (p) => (p.segment || "").toLowerCase() === segParam
+      );
+    }
+
+    // Apply listingFor filter from URL (if any)
+    if (
+      forParam === "resale" ||
+      forParam === "rent" ||
+      forParam === "under-construction"
+    ) {
+      out = out.filter(
+        (p) => (p.listingFor || "").toLowerCase() === forParam
+      );
+    }
+
+    // Light sort: featured first, then most expensive
+    out.sort((a, b) => {
+      const fa = a.isFeatured ? 1 : 0;
+      const fb = b.isFeatured ? 1 : 0;
+      if (fb !== fa) return fb - fa;
+      return (b.price || 0) - (a.price || 0);
     });
-  }, [rows, q]);
 
-  const clearParam = (key: string) => {
-    const next = new URLSearchParams(params);
-    next.delete(key);
-    setParams(next, { replace: true });
-  };
+    return out;
+  }, [rows, segParam, forParam]);
 
-  const clearAll = () => {
-    setParams(new URLSearchParams(), { replace: true });
-  };
+  if (loading) {
+    return (
+      <div className="pt-24 max-w-6xl mx-auto p-6 text-gray-500">
+        Loading properties…
+      </div>
+    );
+  }
 
   return (
-    <main className="pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-navy-900">Properties</h1>
-            <p className="text-gray-600 mt-1">Showing <strong>{filtered.length}</strong> of {rows.length}</p>
-            {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
-          </div>
-          <Link to="/" className="hidden sm:inline-flex items-center rounded-md border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">← Back to Home</Link>
-        </div>
+    <div className="pt-24 max-w-6xl mx-auto p-6">
+      <header className="mb-6">
+        <h1 className="text-3xl font-serif font-bold">Properties</h1>
+        <p className="text-sm text-gray-500">
+          Showing {list.length} of {rows.length} results
+        </p>
+      </header>
 
-        {/* Chips */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {q.segment && <Chip label={`Segment: ${cap(q.segment)}`} onClear={() => clearParam('segment')} />}
-          {q.forWhat && <Chip label={`For: ${prettyFor(q.forWhat)}`} onClear={() => clearParam('for')} />}
-          {q.location && <Chip label={`Location: ${q.location}`} onClear={() => clearParam('location')} />}
-          {(q.min !== undefined || q.max !== undefined) && (
-            <Chip
-              label={`Budget: ${q.min !== undefined ? '₹ ' + formatCrore(q.min) : '—'} – ${q.max !== undefined ? '₹ ' + formatCrore(q.max) : '—'}`}
-              onClear={() => {
-                const next = new URLSearchParams(params);
-                next.delete('min'); next.delete('max');
-                setParams(next, { replace: true });
-              }}
-            />
-          )}
-          {q.bhk && <Chip label={`${q.bhk} BHK`} onClear={() => clearParam('bhk')} />}
-          {q.ptype && <Chip label={`${q.ptype}`} onClear={() => clearParam('ptype')} />}
-          {params.toString() && (
-            <button onClick={clearAll} className="ml-2 text-sm text-gray-600 hover:text-brand-600 underline underline-offset-2">Clear all</button>
-          )}
+      {list.length === 0 ? (
+        <div className="text-gray-600">
+          No properties match these filters. Try clearing some filters or
+          adjusting your search.
         </div>
-
-        {/* Grid */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((p) => {
-            const cover =
-              p.images?.[0] ||
-              '/placeholder.jpg';
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {list.map((p) => {
+            const img =
+              (p.images && p.images.length && p.images[0]) ||
+              "/prop-pics/00"; // safe fallback
+            const priceText = priceForCard(p.price, p.listingFor);
 
             return (
-              <article key={p.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
-                <div className="aspect-[4/3] bg-gray-100">
-                  <img src={cover} alt={p.title} className="w-full h-full object-cover" />
-                </div>
+              <article
+                key={p.id}
+                className="rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition"
+              >
+                {/* Image */}
+                <Link to={`/properties/${p.id}`}>
+                  <div className="aspect-[4/3] bg-gray-100">
+                    <img
+                      src={img}
+                      alt={p.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </Link>
+
+                {/* Body */}
                 <div className="p-4">
-                  <h3 className="font-semibold text-navy-900 line-clamp-1">{p.title}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-1">
-                    {p.areaLocality || p.location || 'South Mumbai'}
-                  </p>
-                  <div className="mt-2 text-sm text-gray-700">
-                    {p.bedrooms ? <span className="mr-3">{p.bedrooms} BHK</span> : null}
-                    {p.bathrooms ? <span className="mr-3">{p.bathrooms} Bath</span> : null}
-                    {p.areaSqft ? <span className="mr-3">{p.areaSqft} sq ft</span> : null}
+                  <Link
+                    to={`/properties/${p.id}`}
+                    className="block font-medium hover:text-brand-600"
+                  >
+                    {p.title}
+                  </Link>
+
+                  <div className="mt-1 text-xs text-gray-500">
+                    {p.location || p.areaLocality || ""}
                   </div>
-                  <div className="mt-3 font-semibold text-navy-900">
-                    {typeof p.price === 'number' ? <>₹ {formatCrore(p.price)}</> : 'Price on request'}
+
+                  {/* Meta */}
+                  <div className="mt-2 text-[13px] text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
+                    {p.bedrooms ? <span>{p.bedrooms} BHK</span> : null}
+                    {p.bathrooms ? <span>{p.bathrooms} Bath</span> : null}
+                    {p.areaSqft ? <span>{p.areaSqft} sq ft</span> : null}
                   </div>
-                  {p.id && (
-                    <Link to={`/properties/${p.id}`} className="mt-3 inline-flex text-sm text-brand-600 hover:underline">
-                      View details →
-                    </Link>
-                  )}
+
+                  {/* Price */}
+                  <div className="mt-2 font-semibold">{priceText}</div>
+
+                  <Link
+                    to={`/properties/${p.id}`}
+                    className="inline-block mt-2 text-sm text-brand-600 hover:text-brand-700"
+                  >
+                    View details →
+                  </Link>
                 </div>
               </article>
             );
           })}
         </div>
-
-        {filtered.length === 0 && (
-          <div className="mt-12 text-center text-gray-600">
-            No properties match these filters. Try clearing some filters or adjusting your search.
-          </div>
-        )}
-      </div>
-    </main>
+      )}
+    </div>
   );
-}
-
-function Chip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-white border px-3 py-1 text-sm text-gray-800">
-      {label}
-      <button onClick={onClear} className="text-gray-400 hover:text-gray-600" aria-label="Clear filter">×</button>
-    </span>
-  );
-}
-function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
-function prettyFor(f: QFor) {
-  if (f === 'resale') return 'Buy';
-  if (f === 'rent') return 'Rent';
-  return 'Under Construction';
 }
