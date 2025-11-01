@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { priceFormat } from "../utils/price"; //
+import { priceFormat } from "../utils/price";
 
 type AnyProp = Record<string, any>;
 
@@ -10,68 +10,58 @@ interface PropertyCardProps {
 export default function PropertyCard({ property }: PropertyCardProps) {
   if (!property) return null;
 
-  // ---- Safe field mapping (aliases + fallbacks) ----
+  /* ---------------- Field mapping (safe fallbacks) ---------------- */
   const id =
     property.id ?? property.slug ?? property._id ?? null;
 
-  const title =
+  const title: string =
     property.title ?? property.name ?? 'Property';
 
-  const location =
+  const location: string =
     property.location ?? property.area ?? property.address ?? 'South Mumbai';
 
-  const segment =
+  const segment: string | undefined =
     property.segment ? String(property.segment).toLowerCase() : undefined; // residential/commercial
 
   const statusRaw =
-    (property.status ?? property.for ?? property.listingType ?? property.saleType) as
-      | 'resale'
-      | 'rent'
-      | 'under-construction'
-      | string
-      | undefined;
+    (property.listingFor ??
+     property.status ??
+     property.for ??
+     property.listingType ??
+     property.saleType) as string | undefined;
 
-  const status = statusRaw ? String(statusRaw).toLowerCase() : undefined;
+  const listingFor: string | undefined = statusRaw ? String(statusRaw).toLowerCase() : undefined; // rent/resale/under-construction
 
-  const bhk =
+  const bhk: number | undefined =
     property.bhk ?? property.bedrooms ?? undefined;
 
-  const baths =
+  const baths: number | undefined =
     property.bathrooms ?? property.baths ?? undefined;
 
-  const areaSqft =
+  const areaSqft: number | undefined =
     property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
 
   const cover: string =
     property.images?.[0] ?? property.cover ?? property.image ?? '/placeholder.jpg';
 
-  // price can be number or string
-  const priceNum =
+  // price can be number or string – coerce to number when possible
+  const priceNum: number | undefined =
     typeof property.price === 'number'
       ? property.price
-      : Number(String(property.price || '').replace(/[^0-9]/g, '') || NaN);
-
-  // ---- Helpers ----
-  const formatPriceCr = (n: number) => `₹${(n / 1e7).toFixed(2)} Cr`;
-  const formatINR = (n: number) => n.toLocaleString('en-IN');
-
-  const priceLabel = Number.isFinite(priceNum)
-    ? priceNum >= 1e7
-      ? formatPriceCr(priceNum)
-      : `₹ ${formatINR(priceNum)}`
-    : property.price || 'Price on request';
+      : Number(String(property.price || '').replace(/[^\d]/g, '')) || undefined;
 
   const isFeatured = Boolean(property.isFeatured ?? property.featured);
 
   const prettyStatus =
-    status === 'resale' ? 'Buy'
-    : status === 'rent' ? 'Rent'
-    : status === 'under-construction' ? 'Under Construction'
+    listingFor === 'resale' ? 'Buy'
+    : listingFor === 'rent' ? 'Rent'
+    : listingFor === 'under-construction' ? 'Under Construction'
     : undefined;
 
   const prettySegment =
     segment ? segment.charAt(0).toUpperCase() + segment.slice(1) : undefined;
 
+  /* ---------------- UI ---------------- */
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
       {/* Image */}
@@ -80,21 +70,23 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           src={cover}
           alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          decoding="async"
         />
 
-        {/* Price */}
-        <div className="text-lg font-semibold text-navy-900">
-          {priceFormat(property.price, property.listingFor)}
-        </div>
-
-        {/* Featured */}
+        {/* Featured badge */}
         {isFeatured && (
-          <div className="absolute top-4 left-4 bg-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+          <div className="absolute top-4 left-4 bg-brand-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
             Featured
           </div>
         )}
 
-        {/* Badges */}
+        {/* Price badge (top-right) */}
+        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1 rounded-lg font-semibold text-navy-900 shadow">
+          {priceFormat(priceNum, listingFor)}
+        </div>
+
+        {/* Small chips (bottom-left) */}
         <div className="absolute left-4 bottom-4 flex flex-wrap gap-2">
           {prettyStatus && (
             <span className="bg-white/90 backdrop-blur px-2 py-0.5 rounded-md text-xs font-medium text-gray-800">
