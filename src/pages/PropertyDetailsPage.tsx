@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+/* ---------- formatting helpers ---------- */
 function formatINR(n: number) {
   return n.toLocaleString("en-IN");
 }
@@ -26,18 +27,17 @@ function formatPrice(
     return forWhat === "rent" ? "₹ — / month" : "Price on request";
   }
 
-  // RENT: show per month + Lakhs if appropriate
+  // RENT: show per month, in Lakhs if appropriate
   if (forWhat === "rent") {
     if (price >= 1e5) {
-      // 1 Lakh = 1e5
-      const lakhs = price / 1e5;
+      const lakhs = price / 1e5; // 1 Lakh = 1e5
       const digits = lakhs >= 10 ? 1 : 2; // 10.0 L vs 1.25 L
       return `${lakhs.toFixed(digits)} L / month`;
     }
     return `₹${formatINR(price)} / month`;
   }
 
-  // SALE: Cr/Lakh/₹
+  // SALE: Cr / Lakh / ₹
   if (price >= 1e7) {
     const cr = price / 1e7;
     return `₹${cr.toFixed(2)} Cr`;
@@ -49,7 +49,7 @@ function formatPrice(
   return `₹${formatINR(price)}`;
 }
 
-
+/* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [rows, setRows] = useState<PropertyRow[]>([]);
@@ -73,32 +73,20 @@ export default function PropertyDetailsPage() {
     };
   }, []);
 
-  const property = useMemo(
-    () => rows.find((p) => p.id === id),
-    [rows, id]
-  );
+  const property = useMemo(() => rows.find((p) => p.id === id), [rows, id]);
 
-  // which image is shown
-const [i, setI] = useState(0);
+  // gallery state (hooks must stay before any early return)
+  const [i, setI] = useState(0); // which image
+  const [fit, setFit] = useState<"contain" | "cover">("contain"); // show full vs fill
 
-// show full photo without cropping (contain) or fill the frame (cover)
-const [fit, setFit] = useState<"contain" | "cover">("contain");
-
-// be safe: remove empty image strings
-const imgs = (property.images || []).filter(Boolean);
-
-
-  // ----- WhatsApp link (this is what was missing) -----
+  // WhatsApp link (safe even if property is null)
   const whatsappNumber = "919920214015"; // country code + number (no +)
   const waText = property
-    ? `Hi, I'm interested in ${property.title} (${formatPrice(
-        property.price
-      )}). Please share details.`
+    ? `Hi, I'm interested in ${property.title} (${formatPrice(property.price, property.listingFor as any)}). Please share details.`
     : `Hi, I'm interested in a property. Please share details.`;
   const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
     waText
   )}`;
-  // ----------------------------------------------------
 
   if (loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -117,6 +105,9 @@ const imgs = (property.images || []).filter(Boolean);
       </div>
     );
   }
+
+  // compute images only after we know property exists
+  const imgs = (property?.images ?? []).filter(Boolean);
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
@@ -150,83 +141,88 @@ const imgs = (property.images || []).filter(Boolean);
         </div>
 
         {/* Gallery */}
-<div className="bg-white rounded-2xl shadow overflow-hidden">
-  {/* Main viewer */}
-  <div className="relative aspect-[16/9] bg-black/5">
-    {imgs.length ? (
-      <img
-        src={imgs[i]}
-        alt={`${property.title} ${i + 1}`}
-        className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
-        loading="eager"
-      />
-    ) : (
-      <div className="w-full h-full grid place-items-center text-gray-500">
-        Photos coming soon
-      </div>
-    )}
+        <div className="bg-white rounded-2xl shadow overflow-hidden">
+          {/* Main viewer */}
+          <div className="relative aspect-[16/9] bg-black/5">
+            {imgs.length ? (
+              <img
+                src={imgs[i]}
+                alt={`${property.title} ${i + 1}`}
+                className={`w-full h-full ${
+                  fit === "contain" ? "object-contain bg-white" : "object-cover"
+                }`}
+                loading="eager"
+              />
+            ) : (
+              <div className="w-full h-full grid place-items-center text-gray-500">
+                Photos coming soon
+              </div>
+            )}
 
-    {/* Prev/Next */}
-    {imgs.length > 1 && (
-      <>
-        <button
-          onClick={() => setI((prev) => (prev - 1 + imgs.length) % imgs.length)}
-          className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
-          aria-label="Previous photo"
-        >
-          <ChevronLeft />
-        </button>
-        <button
-          onClick={() => setI((prev) => (prev + 1) % imgs.length)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
-          aria-label="Next photo"
-        >
-          <ChevronRight />
-        </button>
-      </>
-    )}
+            {/* Prev/Next */}
+            {imgs.length > 1 && (
+              <>
+                <button
+                  onClick={() =>
+                    setI((prev) => (prev - 1 + imgs.length) % imgs.length)
+                  }
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
+                  aria-label="Previous photo"
+                >
+                  <ChevronLeft />
+                </button>
+                <button
+                  onClick={() => setI((prev) => (prev + 1) % imgs.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
+                  aria-label="Next photo"
+                >
+                  <ChevronRight />
+                </button>
+              </>
+            )}
 
-    {/* Fit / Fill toggle */}
-    {imgs.length > 0 && (
-      <button
-        onClick={() => setFit((f) => (f === "contain" ? "cover" : "contain"))}
-        className="absolute bottom-3 right-3 bg-white/90 hover:bg-white rounded-md px-3 py-1 text-xs font-medium shadow"
-        title={fit === "contain" ? "Switch to Fill (cover)" : "Switch to Fit (contain)"}
-      >
-        {fit === "contain" ? "Fit" : "Fill"}
-      </button>
-    )}
-  </div>
+            {/* Fit / Fill toggle */}
+            {imgs.length > 0 && (
+              <button
+                onClick={() =>
+                  setFit((f) => (f === "contain" ? "cover" : "contain"))
+                }
+                className="absolute bottom-3 right-3 bg-white/90 hover:bg-white rounded-md px-3 py-1 text-xs font-medium shadow"
+                title={
+                  fit === "contain"
+                    ? "Switch to Fill (cover)"
+                    : "Switch to Fit (contain)"
+                }
+              >
+                {fit === "contain" ? "Fit" : "Fill"}
+              </button>
+            )}
+          </div>
 
-  {/* Thumbnails */}
-  {imgs.length > 1 && (
-    <div className="p-3 bg-gray-50">
-      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-        {imgs.map((src, idx) => (
-          <button
-            key={idx}
-            onClick={() => setI(idx)}
-            className={`relative h-16 rounded-md overflow-hidden ring-2 ${
-              idx === i ? "ring-brand-500" : "ring-transparent hover:ring-gray-300"
-            }`}
-            aria-label={`Photo ${idx + 1}`}
-          >
-            <img
-              src={src}
-              alt={`thumb ${idx + 1}`}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </button>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
-
-          ) : (
-            <div className="p-10 text-center text-gray-500">
-              Photos coming soon
+          {/* Thumbnails */}
+          {imgs.length > 1 && (
+            <div className="p-3 bg-gray-50">
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                {imgs.map((src, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setI(idx)}
+                    className={`relative h-16 rounded-md overflow-hidden ring-2 ${
+                      idx === i
+                        ? "ring-brand-500"
+                        : "ring-transparent hover:ring-gray-300"
+                    }`}
+                    aria-label={`Photo ${idx + 1}`}
+                  >
+                    <img
+                      src={src}
+                      alt={`thumb ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
