@@ -14,7 +14,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-/* ---------- formatting helpers ---------- */
+/* -------- Currency Format Helpers -------- */
+
 function formatINR(n: number) {
   return n.toLocaleString("en-IN");
 }
@@ -27,29 +28,23 @@ function formatPrice(
     return forWhat === "rent" ? "₹ — / month" : "Price on request";
   }
 
-  // RENT: show per month, in Lakhs if appropriate
+  // RENT
   if (forWhat === "rent") {
     if (price >= 1e5) {
-      const lakhs = price / 1e5; // 1 Lakh = 1e5
-      const digits = lakhs >= 10 ? 1 : 2; // 10.0 L vs 1.25 L
+      const lakhs = price / 1e5; // 1 Lakh = 100,000
+      const digits = lakhs >= 10 ? 1 : 2;
       return `${lakhs.toFixed(digits)} L / month`;
     }
     return `₹${formatINR(price)} / month`;
   }
 
-  // SALE: Cr / Lakh / ₹
-  if (price >= 1e7) {
-    const cr = price / 1e7;
-    return `₹${cr.toFixed(2)} Cr`;
-  }
-  if (price >= 1e5) {
-    const l = price / 1e5;
-    return `₹${l.toFixed(2)} L`;
-  }
+  // SALE — Cr / Lakh / ₹
+  if (price >= 1e7) return `₹${(price / 1e7).toFixed(2)} Cr`;
+  if (price >= 1e5) return `₹${(price / 1e5).toFixed(2)} L`;
   return `₹${formatINR(price)}`;
 }
 
-/* ---------- component ---------- */
+/* -------- Page Component -------- */
 export default function PropertyDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [rows, setRows] = useState<PropertyRow[]>([]);
@@ -57,84 +52,70 @@ export default function PropertyDetailsPage() {
 
   useEffect(() => {
     let alive = true;
+
     (async () => {
       try {
         const data = await fetchSheet();
         if (!alive) return;
-        setRows(data.length ? data : (mock as unknown as PropertyRow[]));
+        setRows(data.length ? data : (mock as PropertyRow[]));
       } catch {
-        setRows(mock as unknown as PropertyRow[]);
+        setRows(mock as PropertyRow[]);
       } finally {
         if (alive) setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
   }, []);
 
-  const property = useMemo(() => rows.find((p) => p.id === id), [rows, id]);
+  const property = useMemo(
+    () => rows.find((p) => p.id === id),
+    [rows, id]
+  );
 
-  // gallery state (hooks must stay before any early return)
-  const [i, setI] = useState(0); // which image
-  const [fit, setFit] = useState<"contain" | "cover">("contain"); // show full vs fill
+  const [i, setI] = useState(0);
+  const [fit, setFit] = useState<"contain" | "cover">("contain");
 
-  // WhatsApp link (safe even if property is null)
-  const whatsappNumber = "919920214015"; // country code + number (no +)
-  const waText = property
-    ? `Hi, I'm interested in ${property.title} (${formatPrice(property.price, property.listingFor as any)}). Please share details.`
-    : `Hi, I'm interested in a property. Please share details.`;
-  const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-    waText
-  )}`;
-
-  if (loading) {
-    return <div className="pt-40 text-center text-gray-500">Loading...</div>;
-  }
-
+  if (loading) return <div className="pt-40 text-center text-gray-500">Loading...</div>;
   if (!property) {
     return (
       <div className="pt-24 max-w-5xl mx-auto p-6">
         <h2 className="text-2xl font-bold">Property not found</h2>
-        <Link
-          to="/properties"
-          className="mt-4 inline-block bg-navy-900 text-white px-4 py-2 rounded"
-        >
+        <Link to="/properties" className="mt-4 inline-block bg-navy-900 text-white px-4 py-2 rounded">
           Back to Properties
         </Link>
       </div>
     );
   }
 
-  // compute images only after we know property exists
   const imgs = (property?.images ?? []).filter(Boolean);
+
+  // WhatsApp link
+  const whatsappNumber = "919920214015";
+  const waText = `Hi, I'm interested in ${property.title} (${formatPrice(property.price, property.listingFor as any)}). Please share details.`;
+  const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waText)}`;
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto p-6 space-y-6">
+
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500">
-          <Link to="/" className="underline">
-            Home
-          </Link>{" "}
-          /{" "}
-          <Link to="/properties" className="underline">
-            Properties
-          </Link>{" "}
-          / {property.title}
+          <Link to="/" className="underline">Home</Link> / 
+          <Link to="/properties" className="underline">Properties</Link> / {property.title}
         </nav>
 
-        {/* Header */}
+        {/* Title + Price */}
         <div className="flex justify-between items-start gap-4">
           <div>
             <h1 className="text-3xl font-bold">{property.title}</h1>
-            {property.location ? (
-              <p className="flex gap-2 text-gray-600 items-center">
-                <MapPin size={18} />
-                {property.location}
-              </p>
-            ) : null}
+            <p className="flex gap-2 text-gray-600 items-center">
+              <MapPin size={18} /> {property.location}
+            </p>
           </div>
+
           <span className="bg-navy-900 text-white px-4 py-2 rounded text-lg font-semibold">
             {formatPrice(property.price, property.listingFor as any)}
           </span>
@@ -142,189 +123,99 @@ export default function PropertyDetailsPage() {
 
         {/* Gallery */}
         <div className="bg-white rounded-2xl shadow overflow-hidden">
-          {/* Main viewer */}
           <div className="relative aspect-[16/9] bg-black/5">
             {imgs.length ? (
               <img
                 src={imgs[i]}
-                alt={`${property.title} ${i + 1}`}
-                className={`w-full h-full ${
-                  fit === "contain" ? "object-contain bg-white" : "object-cover"
-                }`}
-                loading="eager"
+                alt={`image ${i + 1}`}
+                className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
               />
             ) : (
-              <div className="w-full h-full grid place-items-center text-gray-500">
-                Photos coming soon
-              </div>
+              <div className="w-full h-full grid place-items-center text-gray-500">Photos coming soon</div>
             )}
 
-            {/* Prev/Next */}
             {imgs.length > 1 && (
               <>
                 <button
-                  onClick={() =>
-                    setI((prev) => (prev - 1 + imgs.length) % imgs.length)
-                  }
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
-                  aria-label="Previous photo"
-                >
-                  <ChevronLeft />
-                </button>
+                  onClick={() => setI((i - 1 + imgs.length) % imgs.length)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"
+                ><ChevronLeft /></button>
+
                 <button
-                  onClick={() => setI((prev) => (prev + 1) % imgs.length)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
-                  aria-label="Next photo"
-                >
-                  <ChevronRight />
-                </button>
+                  onClick={() => setI((i + 1) % imgs.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"
+                ><ChevronRight /></button>
               </>
             )}
 
-            {/* Fit / Fill toggle */}
+            {/* Fit/Fill toggle */}
             {imgs.length > 0 && (
               <button
-                onClick={() =>
-                  setFit((f) => (f === "contain" ? "cover" : "contain"))
-                }
-                className="absolute bottom-3 right-3 bg-white/90 hover:bg-white rounded-md px-3 py-1 text-xs font-medium shadow"
-                title={
-                  fit === "contain"
-                    ? "Switch to Fill (cover)"
-                    : "Switch to Fit (contain)"
-                }
-              >
-                {fit === "contain" ? "Fit" : "Fill"}
-              </button>
+                onClick={() => setFit(fit === "contain" ? "cover" : "contain")}
+                className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 text-xs rounded shadow"
+              >{fit === "contain" ? "Fit" : "Fill"}</button>
             )}
           </div>
 
-          {/* Thumbnails */}
           {imgs.length > 1 && (
-            <div className="p-3 bg-gray-50">
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                {imgs.map((src, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setI(idx)}
-                    className={`relative h-16 rounded-md overflow-hidden ring-2 ${
-                      idx === i
-                        ? "ring-brand-500"
-                        : "ring-transparent hover:ring-gray-300"
-                    }`}
-                    aria-label={`Photo ${idx + 1}`}
-                  >
-                    <img
-                      src={src}
-                      alt={`thumb ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
+            <div className="p-3 bg-gray-50 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+              {imgs.map((src, idx) => (
+                <button key={idx} onClick={() => setI(idx)} className={`h-16 rounded-md overflow-hidden ring-2 ${idx === i ? "ring-brand-500" : "ring-transparent hover:ring-gray-300"}`}>
+                  <img src={src} className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Details + Enquiry */}
+        {/* Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Overview */}
           <div className="bg-white p-6 rounded-lg shadow space-y-4 md:col-span-2">
             <h2 className="text-xl font-semibold">Overview</h2>
-            {property.description ? (
-              <p>{property.description}</p>
-            ) : (
-              <p className="text-gray-600">Details to be updated.</p>
-            )}
+            <p>{property.description || "Details to be updated."}</p>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
-              {property.bedrooms ? (
-                <div className="flex gap-2 items-center">
-                  <Bed size={18} /> {property.bedrooms} Bedrooms
-                </div>
-              ) : null}
-              {property.bathrooms ? (
-                <div className="flex gap-2 items-center">
-                  <Bath size={18} /> {property.bathrooms} Bathrooms
-                </div>
-              ) : null}
-              {property.areaSqft ? (
-                <div className="flex gap-2 items-center">
-                  <Square size={18} /> {property.areaSqft} sq ft
-                </div>
-              ) : null}
-              {property.propertyType ? (
-                <div className="flex gap-2 items-center">
-                  {property.propertyType}
-                </div>
-              ) : null}
+              {property.bedrooms && <div className="flex gap-2 items-center"><Bed size={18}/> {property.bedrooms} Bedrooms</div>}
+              {property.bathrooms && <div className="flex gap-2 items-center"><Bath size={18}/> {property.bathrooms} Bathrooms</div>}
+              {property.areaSqft && <div className="flex gap-2 items-center"><Square size={18}/> {property.areaSqft} sq ft</div>}
+              {property.propertyType && <div>{property.propertyType}</div>}
             </div>
           </div>
 
-          {/* Enquiry Card with Glass Buttons */}
+          {/* Contact Card */}
           <aside className="bg-white p-6 rounded-lg shadow h-max">
             <div className="text-2xl font-semibold mb-1">
               {formatPrice(property.price, property.listingFor as any)}
             </div>
-            {property.location ? (
-              <div className="text-sm text-gray-600 mb-4">
-                {property.location}
-              </div>
-            ) : null}
+            <div className="text-sm text-gray-600 mb-4">{property.location}</div>
 
-            {/* Premium Glass Buttons */}
-            <div className="space-y-3 mt-2">
-              {/* WhatsApp */}
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 
-                backdrop-blur-md bg-green-600/20 border border-green-400/40 
-                hover:bg-green-500/30 transition-all py-3 rounded-xl font-semibold 
-                text-green-600 hover:text-green-700 shadow-lg hover:shadow-green-500/30"
-              >
-                <MessageCircle size={20} className="text-green-500" />
-                WhatsApp
-              </a>
+            {/* WhatsApp */}
+            <a
+              href={waLink}
+              target="_blank"
+              className="w-full flex items-center justify-center gap-2 backdrop-blur-md bg-green-600/20 border border-green-400/40 hover:bg-green-500/30 py-3 rounded-xl font-semibold text-green-600 hover:text-green-700 shadow-lg"
+            >
+              <MessageCircle size={20}/> WhatsApp
+            </a>
 
-              {/* Call */}
-              <a
-                href="tel:+919920214015"
-                className="w-full flex items-center justify-center gap-2 
-                backdrop-blur-md bg-black/20 border border-black/40 
-                hover:bg-black/40 transition-all py-3 rounded-xl font-semibold 
-                text-black hover:text-white shadow-lg hover:shadow-black/30"
-              >
-                <Phone size={20} className="text-black" />
-                Call Now
-              </a>
-            </div>
+            {/* Call */}
+            <a
+              href="tel:+919920214015"
+              className="w-full flex items-center justify-center gap-2 mt-3 backdrop-blur-md bg-black/20 border border-black/40 hover:bg-black/40 py-3 rounded-xl font-semibold text-black hover:text-white shadow-lg"
+            >
+              <Phone size={20}/> Call Now
+            </a>
           </aside>
         </div>
       </div>
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href={waLink}
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full 
-        shadow-xl hover:scale-110 hover:bg-green-700 transition-all backdrop-blur-xl"
-        aria-label="WhatsApp"
-      >
-        <MessageCircle size={26} />
+      {/* Floating Buttons */}
+      <a href={waLink} target="_blank" className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full shadow-xl hover:scale-110">
+        <MessageCircle size={26}/>
       </a>
 
-      {/* Floating Call Button */}
-      <a
-        href="tel:+919920214015"
-        className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full 
-        shadow-xl hover:scale-110 hover:bg-gray-800 transition-all backdrop-blur-xl"
-        aria-label="Call"
-      >
-        <Phone size={26} />
+      <a href="tel:+919920214015" className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full shadow-xl hover:scale-110">
+        <Phone size={26}/>
       </a>
     </div>
   );
