@@ -89,15 +89,29 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
 
-          {/* Contact */}
-          <aside className="bg-white rounded-lg shadow p-6 space-y-3 sticky top-24">
-            <a href={`https://wa.me/919920214015?text=Hi%2C%20interested%20in%20${property.title}`} className="block bg-green-600 text-white py-3 rounded text-center font-semibold">
-              <MessageCircle size={18}/> WhatsApp
-            </a>
-            <a href="tel:+919920214015" className="block bg-navy-900 text-white py-3 rounded text-center font-semibold">
-              <Phone size={18}/> Call
-            </a>
-          </aside>
+          {/* Contact Buttons */}
+<div className="flex flex-col gap-3 mt-4">
+  {/* WhatsApp */}
+  <a
+    href={`https://wa.me/919920214015?text=Hi%2C%20I%27m%20interested%20in%20${property.title}`}
+    target="_blank"
+    rel="noreferrer"
+    className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold text-lg py-3 rounded-xl shadow-md transition transform hover:scale-[1.02]"
+  >
+    <MessageCircle size={20} strokeWidth={2.4} /> 
+    <span>Chat on WhatsApp</span>
+  </a>
+
+  {/* Call Button */}
+  <a
+    href="tel:+919920214015"
+    className="flex items-center justify-center gap-3 bg-[#0B2447] hover:bg-[#092135] text-white font-semibold text-lg py-3 rounded-xl shadow-md transition transform hover:scale-[1.02]"
+  >
+    <Phone size={20} strokeWidth={2.4} /> 
+    <span>Call Sahai Estates</span>
+  </a>
+</div>
+
         </div>
       </div>
     </div>
