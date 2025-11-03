@@ -7,7 +7,7 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
 import PropertiesPage from './pages/PropertiesPage';
-import PropertyPage from './pages/PropertyPage';   // ✅ correct file
+import PropertyDetailsPage from './pages/PropertyDetailsPage';   // ✅ correct file
 import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
@@ -24,7 +24,7 @@ export default function App() {
           <Route path="/properties" element={<PropertiesPage />} />
 
           {/* ✅ Correct property detail route */}
-          <Route path="/properties/:slug" element={<PropertyPage />} />
+          <Route path="/properties/:slug" element={<PropertyDetailsPage />} />
 
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
