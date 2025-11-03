@@ -1,22 +1,46 @@
 // src/components/PropertyCard.tsx
-import { expandImages } from "../utils/normalize";
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { priceFormat } from "../utils/price";
-import { looksLikeFolder } from "../utils/autoImages";
-
-// treat values like "residential/Beaumonde-903A" as folders
-function looksLikeFolder(s?: string) {
-  if (!s) return false;
-  if (s.startsWith('http')) return false;
-  if (s.startsWith('/')) return true;
-  // has a slash, no extension
-  return /.+\/.+/.test(s) && !/\.[a-z0-9]+$/i.test(s);
-}
 
 type AnyProp = Record<string, any>;
 
 interface PropertyCardProps {
   property: AnyProp;
+}
+
+/** Decide a safe cover image from images/cover/image + folder shorthand */
+function expandCover(prop: AnyProp): string {
+  const raw = prop?.images;
+
+  // 1) Array of images -> first item
+  if (Array.isArray(raw) && raw.length) {
+    const first = String(raw[0]);
+    return (first.startsWith("http") || first.startsWith("/"))
+      ? first
+      : `/prop-pics/${first.replace(/^\/+/, "")}`;
+  }
+
+  // 2) Single string in "images" (or use "cover"/"image")
+  let s: string | undefined =
+    (typeof raw === "string" && raw.trim()) ||
+    (typeof prop?.cover === "string" && prop.cover.trim()) ||
+    (typeof prop?.image === "string" && prop.image.trim());
+
+  if (!s) return "/placeholder.jpg";
+
+  // Folder shorthand: "FOLDER::segment/slug/*" or "segment/slug/*" or "segment/slug"
+  if (s.startsWith("FOLDER::")) {
+    const folder = s.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"");
+    return `/prop-pics/${folder}/1.jpg`;
+  }
+  // Looks like folder (has slash, no extension) OR ends with /*
+  const looksLikeFolder = (t: string) =>
+    /.+\/.+/.test(t) && !/\.[a-z0-9]+$/i.test(t);
+  if (s.endsWith("/*")) s = s.slice(0, -2);
+  if (looksLikeFolder(s)) return `/prop-pics/${s.replace(/^\/+/, "")}/1.jpg`;
+
+  // Explicit path or URL
+  return (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s}`;
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
@@ -26,10 +50,10 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     property.id ?? property.slug ?? property._id ?? null;
 
   const title: string =
-    property.title ?? property.name ?? 'Property';
+    property.title ?? property.name ?? "Property";
 
   const location: string =
-    property.location ?? property.area ?? property.address ?? 'South Mumbai';
+    property.location ?? property.area ?? property.address ?? "South Mumbai";
 
   const segment: string | undefined =
     property.segment ? String(property.segment).toLowerCase() : undefined;
@@ -41,40 +65,29 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     property.listingType ??
     property.saleType;
 
-  const listingFor: string | undefined = listingForRaw ? String(listingForRaw).toLowerCase() : undefined;
+  const listingFor: string | undefined =
+    listingForRaw ? String(listingForRaw).toLowerCase() : undefined;
 
   const bhk: number | undefined = property.bhk ?? property.bedrooms ?? undefined;
   const baths: number | undefined = property.bathrooms ?? property.baths ?? undefined;
   const areaSqft: number | undefined = property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
 
-  // cover image (supports 3 inputs):
-// 1) full URL (http…)
-// 2) explicit image path (/prop-pics/…/1.jpg)
-// 3) folder shorthand ("FOLDER::residential/Beaumonde-903A" OR "residential/Beaumonde-903A")
-let cover: string =
-  property.images?.[0] ?? property.cover ?? property.image ?? '/placeholder.jpg';
-
-if (typeof cover === 'string') {
-  if (cover.startsWith('FOLDER::')) {
-    cover = `/prop-pics/${cover.replace('FOLDER::', '')}/1.jpg`;
-  } else if (looksLikeFolder(cover)) {
-    cover = `/prop-pics/${cover.replace(/^\/+/, '')}/1.jpg`;
-  }
-}
-
-
+  const cover = expandCover(property);
 
   const priceNum: number | undefined =
-    typeof property.price === 'number'
+    typeof property.price === "number"
       ? property.price
-      : Number(String(property.price || '').replace(/[^\d]/g, '')) || undefined;
+      : ((): number | undefined => {
+          const n = Number(String(property.price || "").replace(/[^\d]/g, ""));
+          return Number.isFinite(n) && n > 0 ? n : undefined;
+        })();
 
   const isFeatured = Boolean(property.isFeatured ?? property.featured);
 
   const prettyStatus =
-    listingFor === 'resale' ? 'Buy'
-    : listingFor === 'rent' ? 'Rent'
-    : listingFor === 'under-construction' ? 'Under Construction'
+    listingFor === "resale" ? "Buy"
+    : listingFor === "rent" ? "Rent"
+    : listingFor === "under-construction" ? "Under Construction"
     : undefined;
 
   const prettySegment =
