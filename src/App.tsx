@@ -7,7 +7,7 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
 import PropertiesPage from './pages/PropertiesPage';
-import PropertyDetailsPage from './pages/PropertyDetailsPage'; // <-- use details page
+import PropertyDetailsPage from './pages/PropertyDetailsPage';
 import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
@@ -22,10 +22,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
 
-          {/* NESTED ROUTES to avoid any ambiguity */}
+          {/* NESTED so listing and detail can’t clash */}
           <Route path="/properties">
-            <Route index element={<PropertiesPage />} />                {/* /#/properties */}
-            <Route path=":slug" element={<PropertyDetailsPage />} />    {/* /#/properties/:slug */}
+            <Route index element={<PropertiesPage />} />          {/* #/properties */}
+            <Route path=":slug" element={<PropertyDetailsPage />} /> {/* #/properties/:slug */}
           </Route>
 
           <Route path="/about" element={<AboutPage />} />
