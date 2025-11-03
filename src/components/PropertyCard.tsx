@@ -4,6 +4,15 @@ import { Link } from 'react-router-dom';
 import { priceFormat } from "../utils/price";
 import { looksLikeFolder } from "../utils/autoImages";
 
+// treat values like "residential/Beaumonde-903A" as folders
+function looksLikeFolder(s?: string) {
+  if (!s) return false;
+  if (s.startsWith('http')) return false;
+  if (s.startsWith('/')) return true;
+  // has a slash, no extension
+  return /.+\/.+/.test(s) && !/\.[a-z0-9]+$/i.test(s);
+}
+
 type AnyProp = Record<string, any>;
 
 interface PropertyCardProps {
@@ -38,10 +47,21 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const baths: number | undefined = property.bathrooms ?? property.baths ?? undefined;
   const areaSqft: number | undefined = property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
 
-  // cover image (folder shorthand -> /1.jpg)
-  // Get resolved images (supports folder shorthand like "residential/Beaumonde/*")
-const coverList = expandImages(property.images || []);
-const cover: string = coverList[0] || property.cover || property.image || "/placeholder.jpg";
+  // cover image (supports 3 inputs):
+// 1) full URL (http…)
+// 2) explicit image path (/prop-pics/…/1.jpg)
+// 3) folder shorthand ("FOLDER::residential/Beaumonde-903A" OR "residential/Beaumonde-903A")
+let cover: string =
+  property.images?.[0] ?? property.cover ?? property.image ?? '/placeholder.jpg';
+
+if (typeof cover === 'string') {
+  if (cover.startsWith('FOLDER::')) {
+    cover = `/prop-pics/${cover.replace('FOLDER::', '')}/1.jpg`;
+  } else if (looksLikeFolder(cover)) {
+    cover = `/prop-pics/${cover.replace(/^\/+/, '')}/1.jpg`;
+  }
+}
+
 
 
   const priceNum: number | undefined =
