@@ -47,8 +47,7 @@ export default function PropertyDetailsPage() {
   );
 
   // ----- Gallery images (auto-discover from folder shorthand) -----
-  const [imgs, setImgs] = useState<string[]>([]);
-  const [loadingImages, setLoadingImages] = useState(true);
+  const imgs = expandImages(property.images);
 
   useEffect(() => {
     let alive = true;
