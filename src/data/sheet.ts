@@ -36,17 +36,37 @@ function splitList(v?: string) {
 }
 
 // Convert any Google Drive style link to a direct "view" URL that loads as an image.
-function normalizeGoogleDriveUrl(url: string) {
-  // examples:
-  // https://drive.google.com/file/d/<ID>/view?usp=sharing
-  // https://drive.google.com/uc?id=<ID>&export=view
-  // https://drive.google.com/open?id=<ID>
-  const idMatch =
-    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-    url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  const id = idMatch?.[1];
-  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+function normalizeImages(v?: string) {
+  if (!v) return [];
+  const raw = v.trim();
+
+  // already a list of URLs/paths
+  if (raw.includes(',') || raw.includes('.jpg') || raw.includes('.jpeg') || raw.includes('.png')) {
+    return raw.split(/[|,]/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // FOLDER::prefix
+  if (raw.startsWith('FOLDER::')) {
+    const folder = raw.replace('FOLDER::', '').replace(/^\/+/, '');
+    return Array.from({ length: 8 }, (_, i) => `/prop-pics/${folder}/${i + 1}.jpg`);
+  }
+
+  // "folder/*" shorthand
+  if (raw.endsWith('/*')) {
+    const folder = raw.slice(0, -2).replace(/^\/+/, '');
+    return Array.from({ length: 8 }, (_, i) => `/prop-pics/${folder}/${i + 1}.jpg`);
+  }
+
+  // looks like a folder path (no extension, has slash)
+  if (/.+\/.+/.test(raw) && !/\.[a-z0-9]+$/i.test(raw)) {
+    const folder = raw.replace(/^\/+/, '');
+    return Array.from({ length: 8 }, (_, i) => `/prop-pics/${folder}/${i + 1}.jpg`);
+  }
+
+  // single http or single path
+  return [raw];
 }
+
 
 function isHttp(u: string) {
   return u.startsWith('http://') || u.startsWith('https://');
