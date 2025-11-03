@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { priceFormat } from "../utils/price";
 import { discoverImages, looksLikeFolder } from "../utils/autoImages";
+import { expandImages } from "../utils/normalize";
+
 
 export default function PropertyDetailsPage() {
   const { id } = useParams<{ id: string }>();
