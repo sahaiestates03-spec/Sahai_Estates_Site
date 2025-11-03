@@ -22,11 +22,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
 
-          {/* NESTED so listing and detail can’t clash */}
-          <Route path="/properties">
-            <Route index element={<PropertiesPage />} />          {/* #/properties */}
-            <Route path=":slug" element={<PropertyDetailsPage />} /> {/* #/properties/:slug */}
-          </Route>
+          {/* Listing and Details are distinct; order doesn't matter in RRv6 */}
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/properties/:slug" element={<PropertyDetailsPage />} />
 
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
