@@ -7,11 +7,11 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
 import PropertiesPage from './pages/PropertiesPage';
-import PropertyDetailsPage from './pages/PropertyDetailsPage';   // ✅ correct file
+import PropertyDetailsPage from './pages/PropertyDetailsPage'; // <-- use details page
 import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
-import AdminUpload from './pages/AdminUpload'; 
+import AdminUpload from './pages/AdminUpload';
 
 export default function App() {
   return (
@@ -21,10 +21,12 @@ export default function App() {
       <main id="scroll-root" className="min-h-screen pt-16">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/properties" element={<PropertiesPage />} />
 
-          {/* ✅ Correct property detail route */}
-          <Route path="/properties/:slug" element={<PropertyDetailsPage />} />
+          {/* NESTED ROUTES to avoid any ambiguity */}
+          <Route path="/properties">
+            <Route index element={<PropertiesPage />} />                {/* /#/properties */}
+            <Route path=":slug" element={<PropertyDetailsPage />} />    {/* /#/properties/:slug */}
+          </Route>
 
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
