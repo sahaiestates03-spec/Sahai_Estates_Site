@@ -165,9 +165,9 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         </div>
 
         {slug ? (
-          <Link to={`/properties/${encodeURIComponent(property.slug || property.id || sluggify(property.title || ""))}`}>
-  View Details →
-</Link>
+          <Link to={`/properties/${encodeURIComponent(property.slug || property.id || (property.title||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
+)}`}>View Details →</Link>
+
 
         ) : (
           <span className="text-sm text-gray-500 italic">No details link</span>
