@@ -64,6 +64,7 @@ function expandImages(p?: PropertyRow): string[] {
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
+  if (!slug) return null; 
   const key = sluggify(String(slug || ""));
   const location = useLocation() as { state?: { property?: PropertyRow } };
 
