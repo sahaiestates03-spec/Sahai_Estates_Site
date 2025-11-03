@@ -30,7 +30,7 @@ function expandCover(prop: AnyProp): string {
 
   // Folder shorthand: "FOLDER::segment/slug/*" or "segment/slug/*" or "segment/slug"
   if (s.startsWith("FOLDER::")) {
-    const folder = s.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"");
+    const folder = s.replace(/^FOLDER::/i, "").replace(/\/?\*$/, "");
     return `/prop-pics/${folder}/1.jpg`;
   }
   // Looks like folder (has slash, no extension) OR ends with /*
@@ -40,39 +40,57 @@ function expandCover(prop: AnyProp): string {
   if (looksLikeFolder(s)) return `/prop-pics/${s.replace(/^\/+/, "")}/1.jpg`;
 
   // Explicit path or URL
-  return (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s}`;
+  return s.startsWith("http") || s.startsWith("/") ? s : `/prop-pics/${s}`;
 }
 
-/** Make a reliable slug for routing */
-function makeSlug(prop: AnyProp): string | null {
-  const s = prop?.slug;
-  if (typeof s === "string" && s.trim()) {
-    return s.trim().toLowerCase();
-  }
-  const fromTitle = prop?.title ?? prop?.name;
-  if (typeof fromTitle === "string" && fromTitle.trim()) {
-    return fromTitle
-      .trim()
+/** Make a reliable slug for routing (slug -> id -> slugified title) */
+function makeSafeSlug(prop: AnyProp): string {
+  const fromSlug =
+    typeof prop?.slug === "string" && prop.slug.trim()
+      ? prop.slug.trim()
+      : null;
+
+  const fromId =
+    typeof prop?.id === "string" && prop.id.trim()
+      ? prop.id.trim()
+      : typeof prop?.id === "number"
+      ? String(prop.id)
+      : null;
+
+  const fromTitle =
+    typeof prop?.title === "string" && prop.title.trim()
+      ? prop.title.trim()
+      : typeof prop?.name === "string" && prop.name.trim()
+      ? prop.name.trim()
+      : "";
+
+  const slugify = (s: string) =>
+    s
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
-  }
-  return null;
+
+  return (
+    (fromSlug && slugify(fromSlug)) ||
+    (fromId && slugify(fromId)) ||
+    slugify(fromTitle) ||
+    "property"
+  );
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
   if (!property) return null;
 
-  const slug = makeSlug(property); // ✅ always prefer slug for route
+  const safeSlug = makeSafeSlug(property);
 
-  const title: string =
-    property.title ?? property.name ?? "Property";
+  const title: string = property.title ?? property.name ?? "Property";
 
   const location: string =
     property.location ?? property.area ?? property.address ?? "South Mumbai";
 
-  const segment: string | undefined =
-    property.segment ? String(property.segment).toLowerCase() : undefined;
+  const segment: string | undefined = property.segment
+    ? String(property.segment).toLowerCase()
+    : undefined;
 
   const listingForRaw =
     property.listingFor ??
@@ -81,19 +99,23 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     property.listingType ??
     property.saleType;
 
-  const listingFor: string | undefined =
-    listingForRaw ? String(listingForRaw).toLowerCase() : undefined;
+  const listingFor: string | undefined = listingForRaw
+    ? String(listingForRaw).toLowerCase()
+    : undefined;
 
-  const bhk: number | undefined = property.bhk ?? property.bedrooms ?? undefined;
-  const baths: number | undefined = property.bathrooms ?? property.baths ?? undefined;
-  const areaSqft: number | undefined = property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
+  const bhk: number | undefined =
+    property.bhk ?? property.bedrooms ?? undefined;
+  const baths: number | undefined =
+    property.bathrooms ?? property.baths ?? undefined;
+  const areaSqft: number | undefined =
+    property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
 
   const cover = expandCover(property);
 
   const priceNum: number | undefined =
     typeof property.price === "number"
       ? property.price
-      : ((): number | undefined => {
+      : (() => {
           const n = Number(String(property.price || "").replace(/[^\d]/g, ""));
           return Number.isFinite(n) && n > 0 ? n : undefined;
         })();
@@ -101,10 +123,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const isFeatured = Boolean(property.isFeatured ?? property.featured);
 
   const prettyStatus =
-    listingFor === "resale" ? "Buy"
-    : listingFor === "rent" ? "Rent"
-    : listingFor === "under-construction" ? "Under Construction"
-    : undefined;
+    listingFor === "resale"
+      ? "Buy"
+      : listingFor === "rent"
+      ? "Rent"
+      : listingFor === "under-construction"
+      ? "Under Construction"
+      : undefined;
 
   const prettySegment =
     segment ? segment.charAt(0).toUpperCase() + segment.slice(1) : undefined;
@@ -164,14 +189,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           {areaSqft ? <span>📐 {areaSqft} sq ft</span> : null}
         </div>
 
-        {slug ? (
-          <Link to={`/properties/${encodeURIComponent(property.slug || property.id || (property.title||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
-)}`}>View Details →</Link>
-
-
-        ) : (
-          <span className="text-sm text-gray-500 italic">No details link</span>
-        )}
+        <Link
+          to={`/properties/${encodeURIComponent(safeSlug)}`}
+          state={{ property }} // ✅ pass full data for instant detail render
+          className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-semibold"
+        >
+          View Details →
+        </Link>
       </div>
     </div>
   );
