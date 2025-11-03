@@ -1,5 +1,7 @@
+// src/components/PropertyCard.tsx
 import { Link } from 'react-router-dom';
 import { priceFormat } from "../utils/price";
+import { looksLikeFolder } from "../utils/autoImages";
 
 type AnyProp = Record<string, any>;
 
@@ -10,7 +12,6 @@ interface PropertyCardProps {
 export default function PropertyCard({ property }: PropertyCardProps) {
   if (!property) return null;
 
-  /* ---------------- Field mapping (safe fallbacks) ---------------- */
   const id =
     property.id ?? property.slug ?? property._id ?? null;
 
@@ -21,30 +22,31 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     property.location ?? property.area ?? property.address ?? 'South Mumbai';
 
   const segment: string | undefined =
-    property.segment ? String(property.segment).toLowerCase() : undefined; // residential/commercial
+    property.segment ? String(property.segment).toLowerCase() : undefined;
 
-  const statusRaw =
-    (property.listingFor ??
-     property.status ??
-     property.for ??
-     property.listingType ??
-     property.saleType) as string | undefined;
+  const listingForRaw =
+    property.listingFor ??
+    property.status ??
+    property.for ??
+    property.listingType ??
+    property.saleType;
 
-  const listingFor: string | undefined = statusRaw ? String(statusRaw).toLowerCase() : undefined; // rent/resale/under-construction
+  const listingFor: string | undefined = listingForRaw ? String(listingForRaw).toLowerCase() : undefined;
 
-  const bhk: number | undefined =
-    property.bhk ?? property.bedrooms ?? undefined;
+  const bhk: number | undefined = property.bhk ?? property.bedrooms ?? undefined;
+  const baths: number | undefined = property.bathrooms ?? property.baths ?? undefined;
+  const areaSqft: number | undefined = property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
 
-  const baths: number | undefined =
-    property.bathrooms ?? property.baths ?? undefined;
-
-  const areaSqft: number | undefined =
-    property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
-
-  const cover: string =
+  // cover image (folder shorthand -> /1.jpg)
+  let cover: string =
     property.images?.[0] ?? property.cover ?? property.image ?? '/placeholder.jpg';
 
-  // price can be number or string – coerce to number when possible
+  if (typeof cover === 'string' && cover.startsWith("FOLDER::")) {
+    cover = `/prop-pics/${cover.replace("FOLDER::", "")}/1.jpg`;
+  } else if (typeof cover === 'string' && looksLikeFolder(cover)) {
+    cover = `/prop-pics/${cover.replace(/^\/+/, "")}/1.jpg`;
+  }
+
   const priceNum: number | undefined =
     typeof property.price === 'number'
       ? property.price
@@ -61,7 +63,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const prettySegment =
     segment ? segment.charAt(0).toUpperCase() + segment.slice(1) : undefined;
 
-  /* ---------------- UI ---------------- */
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
       {/* Image */}
@@ -74,19 +75,19 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           decoding="async"
         />
 
-        {/* Featured badge */}
+        {/* Featured */}
         {isFeatured && (
           <div className="absolute top-4 left-4 bg-brand-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
             Featured
           </div>
         )}
 
-        {/* Price badge (top-right) */}
+        {/* Price */}
         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1 rounded-lg font-semibold text-navy-900 shadow">
           {priceFormat(priceNum, listingFor)}
         </div>
 
-        {/* Small chips (bottom-left) */}
+        {/* Badges */}
         <div className="absolute left-4 bottom-4 flex flex-wrap gap-2">
           {prettyStatus && (
             <span className="bg-white/90 backdrop-blur px-2 py-0.5 rounded-md text-xs font-medium text-gray-800">
@@ -111,14 +112,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         <h3 className="text-xl font-semibold mb-1 line-clamp-1">{title}</h3>
         <p className="text-gray-600 mb-3 line-clamp-1">{location}</p>
 
-        {/* Details row */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-700 mb-4">
           {bhk ? <span>🛏 {bhk} Beds</span> : null}
           {baths ? <span>🛁 {baths} Baths</span> : null}
           {areaSqft ? <span>📐 {areaSqft} sq ft</span> : null}
         </div>
 
-        {/* Link */}
         {id ? (
           <Link
             to={`/properties/${id}`}
