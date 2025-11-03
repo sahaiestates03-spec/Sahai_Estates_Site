@@ -11,12 +11,23 @@ const POPULAR_LOCALITIES = [
   'Churchgate','Walkeshwar','Altamount Road','Napean Sea Road'
 ];
 
-const BUDGETS = [
-  { label: 'Up to ₹5 Cr', min: '', max: '50000000' },
-  { label: '₹5–10 Cr',   min: '50000000',  max: '100000000' },
-  { label: '₹10–15 Cr',  min: '100000000', max: '150000000' },
-  { label: '₹15–25 Cr',  min: '150000000', max: '250000000' },
-  { label: '₹25 Cr+',    min: '250000000', max: '' },
+// ---- Budgets (Sale vs Rent) ----
+const SALE_BUDGETS = [
+  { label: 'Up to ₹50 L', min: '0',          max: '5000000'   }, // 50 L
+  { label: '₹50 L – ₹1 Cr', min: '5000000',   max: '10000000'  },
+  { label: '₹1 – ₹2 Cr',    min: '10000000',  max: '20000000'  },
+  { label: '₹2 – ₹5 Cr',    min: '20000000',  max: '50000000'  },
+  { label: '₹5 – ₹10 Cr',   min: '50000000',  max: '100000000' },
+  { label: '₹10 Cr+',       min: '100000000', max: ''          },
+];
+
+const RENT_BUDGETS = [
+  { label: 'Up to ₹50k / month', min: '0',        max: '50000'   },
+  { label: '₹50k – ₹1L / month', min: '50000',    max: '100000'  },
+  { label: '₹1L – ₹2L / month',  min: '100000',   max: '200000'  },
+  { label: '₹2L – ₹3L / month',  min: '200000',   max: '300000'  },
+  { label: '₹3L – ₹5L / month',  min: '300000',   max: '500000'  },
+  { label: '₹5L+ / month',       min: '500000',   max: ''        },
 ];
 
 const PTYPES = ['Apartment','Penthouse','Duplex','Villa','Sky Villa','Office','Retail'];
@@ -24,6 +35,21 @@ const PTYPES = ['Apartment','Penthouse','Duplex','Villa','Sky Villa','Office','R
 const INPUT =
   'w-full px-3 py-2 border rounded-lg bg-white text-gray-900 placeholder:text-gray-500 ' +
   'focus:ring-2 focus:ring-brand-500 outline-none';
+
+// ---- helpers ----
+function inr(n?: number) {
+  if (n == null) return '';
+  return n.toLocaleString('en-IN');
+}
+function formatCr(n: number) {
+  return `₹${(n / 1e7).toFixed(2)} Cr`;
+}
+function formatL(n: number) {
+  // show 1 decimal above 10L, 2 decimals below for a nice look
+  const lakhs = n / 1e5;
+  const digits = lakhs >= 10 ? 1 : 2;
+  return `₹${lakhs.toFixed(digits)} L`;
+}
 
 export default function HomeSearch() {
   const navigate = useNavigate();
@@ -78,7 +104,7 @@ export default function HomeSearch() {
       return;
     }
     const q = new URLSearchParams();
-    q.set('for', tab);
+    q.set('for', tab);                      // <- important: carries rent/buy/new launch
     q.set('segment', segment);
     if (location.trim()) q.set('location', location.trim());
     if (min) q.set('min', min);
@@ -100,6 +126,25 @@ export default function HomeSearch() {
   };
 
   const clearAll = () => { setLocation(''); setMin(''); setMax(''); setBhk(''); setPtype(''); };
+
+  // computed UI helpers based on current tab
+  const isRent = tab === 'rent';
+  const BUDGET_OPTIONS = isRent ? RENT_BUDGETS : SALE_BUDGETS;
+  const minPlaceholder = isRent ? 'Min (₹ / month)' : 'Min (₹)';
+  const maxPlaceholder = isRent ? 'Max (₹ / month)' : 'Max (₹)';
+
+  function budgetChipText() {
+    if (!min && !max) return null;
+    if (isRent) {
+      const left  = min ? `${formatL(+min)}` : '—';
+      const right = max ? `${formatL(+max)}` : '—';
+      return `Budget: ${left} – ${right} / month`;
+    } else {
+      const left  = min ? `${formatCr(+min)}` : '—';
+      const right = max ? `${formatCr(+max)}` : '—';
+      return `Budget: ${left} – ${right}`;
+    }
+  }
 
   return (
     <div
@@ -192,7 +237,7 @@ export default function HomeSearch() {
               <div className="mb-3">
                 <div className="text-xs font-medium text-gray-600 mb-2">Quick Budget</div>
                 <div className="flex flex-wrap gap-2">
-                  {BUDGETS.map(b => (
+                  {BUDGET_OPTIONS.map(b => (
                     <button
                       key={b.label}
                       onClick={() => { setMin(b.min); setMax(b.max); }}
@@ -216,13 +261,15 @@ export default function HomeSearch() {
                     id="min"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    placeholder="e.g. 50000000"
+                    placeholder={minPlaceholder}
                     value={min}
                     onChange={e => setMin(e.target.value.replace(/\D/g, ''))}
                     className={INPUT}
                     style={{ color: '#111' }}
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">Amount in INR</p>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Amount in INR{isRent ? ' per month' : ''}
+                  </p>
                 </div>
                 <div>
                   <label htmlFor="max" className="block text-xs font-medium text-gray-600 mb-1">Budget (Max)</label>
@@ -230,13 +277,15 @@ export default function HomeSearch() {
                     id="max"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    placeholder="e.g. 200000000"
+                    placeholder={maxPlaceholder}
                     value={max}
                     onChange={e => setMax(e.target.value.replace(/\D/g, ''))}
                     className={INPUT}
                     style={{ color: '#111' }}
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">Amount in INR</p>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Amount in INR{isRent ? ' per month' : ''}
+                  </p>
                 </div>
 
                 <div>
@@ -269,8 +318,14 @@ export default function HomeSearch() {
                 )}
                 {(min || max) && (
                   <span className="text-xs px-2 py-1 bg-white border rounded-full text-gray-900">
-                    Budget: {min ? `₹${(+min/1e7).toFixed(2)}Cr` : '—'} – {max ? `₹${(+max/1e7).toFixed(2)}Cr` : '—'}
-                    <button className="ml-1 text-gray-500" onClick={() => { setMin(''); setMax(''); }} aria-label="remove"><X size={12}/></button>
+                    {budgetChipText()}
+                    <button
+                      className="ml-1 text-gray-500"
+                      onClick={() => { setMin(''); setMax(''); }}
+                      aria-label="remove"
+                    >
+                      <X size={12}/>
+                    </button>
                   </span>
                 )}
                 {ptype && (
