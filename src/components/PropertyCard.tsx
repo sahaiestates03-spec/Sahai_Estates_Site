@@ -165,12 +165,10 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         </div>
 
         {slug ? (
-          <Link
-            to={`/properties/${encodeURIComponent(slug)}`} // ✅ route matches /properties/:slug
-            className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-semibold"
-          >
-            View Details →
-          </Link>
+          <Link to={`/properties/${encodeURIComponent(property.slug || property.id || sluggify(property.title || ""))}`}>
+  View Details →
+</Link>
+
         ) : (
           <span className="text-sm text-gray-500 italic">No details link</span>
         )}
