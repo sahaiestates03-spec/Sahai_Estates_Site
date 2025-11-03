@@ -31,40 +31,87 @@ function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construc
   return `₹${inr(price)}`;
 }
 
-function looksLikeFolder(v: unknown) {
-  return typeof v === "string" && /\/$|\*$/i.test(v);
+/** Build a list of *possible* image URLs from many formats, then we preload+filter valid ones. */
+function buildImageCandidates(p: PropertyRow): string[] {
+  const out: string[] = [];
+  const push = (u?: string) => {
+    if (!u) return;
+    const s = u.trim();
+    if (!s) return;
+    // make relative paths point to /prop-pics
+    const final = (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s.replace(/^\/+/, "")}`;
+    if (!out.includes(final)) out.push(final);
+  };
+
+  const raw: any = (p as any).images;
+  const seg = (p as any).segment ? String((p as any).segment).toLowerCase() : "";
+  const slug = (p as any).slug ? String((p as any).slug).toLowerCase() : sluggify((p as any).id || (p as any).title);
+  const folderGuesses: string[] = [];
+  if (seg && slug) folderGuesses.push(`${seg}/${slug}`);
+  if (slug) folderGuesses.push(`${slug}`);
+
+  // 1) If images is an array
+  if (Array.isArray(raw)) {
+    raw.forEach((r) => push(String(r || "")));
+  }
+
+  // 2) If images is a string
+  if (typeof raw === "string") {
+    const text = raw.trim();
+
+    // FOLDER::segment/slug/* or segment/slug/* or segment/slug (no extension)
+    if (text.startsWith("FOLDER::")) {
+      const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"").replace(/^\/+/, "");
+      // try 1..20 with multiple extensions
+      for (let i = 1; i <= 20; i++) {
+        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
+      }
+    } else if (/(.+\/.+)(\*|$)/.test(text) && !/\.[a-z0-9]+$/i.test(text)) {
+      const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
+      for (let i = 1; i <= 20; i++) {
+        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
+      }
+    } else if (text.includes(",")) {
+      text.split(",").map(s => s.trim()).forEach((x) => push(x));
+    } else if (text) {
+      push(text);
+    }
+  }
+
+  // 3) Fallback guesses using segment/slug and slug only
+  folderGuesses.forEach((folder) => {
+    for (let i = 1; i <= 20; i++) {
+      ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
+    }
+  });
+
+  // 4) As a final single-file guess
+  folderGuesses.forEach((folder) => {
+    ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}.${ext}`));
+  });
+
+  return out;
 }
 
-function expandImages(p?: PropertyRow): string[] {
-  if (!p) return [];
-  const raw = (p as any).images;
-  if (Array.isArray(raw)) return raw.filter(Boolean);
-
-  const text = typeof raw === "string" ? raw.trim() : "";
-
-  if (text.startsWith("FOLDER::")) {
-    const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"");
-    return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
-  }
-  if (looksLikeFolder(text)) {
-    const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
-    return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
-  }
-  if (text.includes(",")) {
-    return text.split(",").map(s => s.trim())
-      .filter(Boolean)
-      .map(x => (x.startsWith("http") || x.startsWith("/")) ? x : `/prop-pics/${x}`);
-  }
-  if (text) {
-    return [(text.startsWith("http") || text.startsWith("/")) ? text : `/prop-pics/${text}`];
-  }
-  return [];
+/** Preload all candidates and keep only valid ones */
+async function preloadImages(urls: string[]): Promise<string[]> {
+  const checks = urls.map(
+    (u) =>
+      new Promise<string | null>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(u);
+        img.onerror = () => resolve(null);
+        img.src = u;
+      })
+  );
+  const results = await Promise.all(checks);
+  return results.filter((u): u is string => Boolean(u));
 }
 
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
-  if (!slug) return null; // ✅ do NOT render on /properties?...
+  if (!slug) return null; // do NOT render on /properties?...
 
   const key = sluggify(String(slug || ""));
   const location = useLocation() as { state?: { property?: PropertyRow } };
@@ -89,7 +136,6 @@ export default function PropertyDetailsPage() {
     return () => { alive = false; };
   }, []);
 
-  // robust matching against sheet data
   const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
     return (
@@ -102,15 +148,29 @@ export default function PropertyDetailsPage() {
 
   const property = propFromState || propFromSheet || null;
 
+  const [images, setImages] = useState<string[]>([]);
+  const [imgLoading, setImgLoading] = useState(true);
+
+  // Build + preload images once we have the property
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!property) return;
+      setImgLoading(true);
+      const candidates = buildImageCandidates(property);
+      const valid = await preloadImages(candidates);
+      if (!alive) return;
+      setImages(valid);
+      setImgLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [property]);
+
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
   }
 
   if (!property) {
-    // helpful suggestions to debug if nothing matches
-    const sample = rows.slice(0, 10).map(r =>
-      sluggify((r.slug as any) || (r.id as any) || (r.title as any))
-    );
     return (
       <div className="pt-24 max-w-5xl mx-auto p-6">
         <nav className="text-sm text-gray-500 mb-4">
@@ -119,17 +179,6 @@ export default function PropertyDetailsPage() {
           <span>Not found</span>
         </nav>
         <h1 className="text-2xl font-semibold">Property not found</h1>
-        {rows.length > 0 && (
-          <div className="mt-3 text-sm text-gray-600">
-            Try one of these available slugs:&nbsp;
-            {sample.map((s, i) => (
-              <span key={i}>
-                <Link to={`/properties/${encodeURIComponent(s)}`} className="text-blue-600 underline">{s}</Link>
-                {i < sample.length - 1 ? ", " : ""}
-              </span>
-            ))}
-          </div>
-        )}
         <Link to="/properties" className="inline-block mt-6 px-5 py-3 bg-black text-white rounded-lg">
           Back to Properties
         </Link>
@@ -137,11 +186,10 @@ export default function PropertyDetailsPage() {
     );
   }
 
-  const imgs = expandImages(property);
   const [index, setIndex] = useState(0);
   const [fit, setFit] = useState<"contain"|"cover">("contain");
-  const prev = () => setIndex(i => (i - 1 + imgs.length) % imgs.length);
-  const next = () => setIndex(i => (i + 1) % imgs.length);
+  const prev = () => setIndex(i => (i - 1 + images.length) % images.length);
+  const next = () => setIndex(i => (i + 1) % images.length);
   const goto = (i: number) => setIndex(i);
 
   const waNumber = "919920214015";
@@ -187,41 +235,44 @@ export default function PropertyDetailsPage() {
 
         {/* Gallery */}
         <div className="bg-white rounded-2xl shadow overflow-hidden">
-          {imgs.length ? (
-            <div className="relative aspect-[16/9] bg-black/5">
-              <img
-                src={imgs[index]}
-                alt={`${property.title} ${index + 1}`}
-                className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
-                loading="eager"
-              />
-              {imgs.length > 1 && (
-                <>
-                  <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronLeft/></button>
-                  <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronRight/></button>
-                </>
+          {imgLoading ? (
+            <div className="p-12 text-center text-gray-500">Loading photos…</div>
+          ) : images.length ? (
+            <>
+              <div className="relative aspect-[16/9] bg-black/5">
+                <img
+                  src={images[index]}
+                  alt={`${property.title} ${index + 1}`}
+                  className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
+                  loading="eager"
+                />
+                {images.length > 1 && (
+                  <>
+                    <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronLeft/></button>
+                    <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronRight/></button>
+                  </>
+                )}
+                <button
+                  onClick={() => setFit(f => f === "contain" ? "cover" : "contain")}
+                  className="absolute bottom-3 right-3 bg-white/90 rounded-md px-3 py-1 text-xs font-medium shadow"
+                >
+                  {fit === "contain" ? "Fit" : "Fill"}
+                </button>
+              </div>
+
+              {images.length > 1 && (
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-gray-50">
+                  {images.map((src, i) => (
+                    <button key={src + i} onClick={() => goto(i)}
+                            className={`h-20 rounded overflow-hidden border ${i === index ? "border-black ring-2 ring-gray-400" : "border-transparent"}`}>
+                      <img src={src} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
               )}
-              <button
-                onClick={() => setFit(f => f === "contain" ? "cover" : "contain")}
-                className="absolute bottom-3 right-3 bg-white/90 rounded-md px-3 py-1 text-xs font-medium shadow"
-              >
-                {fit === "contain" ? "Fit" : "Fill"}
-              </button>
-            </div>
+            </>
           ) : (
             <div className="p-12 text-center text-gray-500">Photos coming soon</div>
-          )}
-
-          {/* Thumbnails */}
-          {imgs.length > 1 && (
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-gray-50">
-              {imgs.map((src, i) => (
-                <button key={i} onClick={() => goto(i)}
-                        className={`h-20 rounded overflow-hidden border ${i === index ? "border-black ring-2 ring-gray-400" : "border-transparent"}`}>
-                  <img src={src} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                </button>
-              ))}
-            </div>
           )}
         </div>
 
