@@ -1,23 +1,62 @@
-// src/pages/PropertyDetailsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
 import { properties as mock } from "../data/mockData";
 import {
-  MapPin,
-  Bed,
-  Bath,
-  Square,
-  Phone,
-  MessageCircle,
-  ChevronLeft,
-  ChevronRight,
+  MapPin, Bed, Bath, Square, Phone, MessageCircle,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
-import { priceFormat } from "../utils/price";
-import { discoverImages, looksLikeFolder } from "../utils/autoImages";
-import { expandImages } from "../utils/normalize";
 
+/* ---------- helpers ---------- */
+function inr(n: number) { return n.toLocaleString("en-IN"); }
 
+function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construction") {
+  if (!price || price <= 0) return listingFor === "rent" ? "₹ — / month" : "Price on request";
+  if (listingFor === "rent") {
+    if (price >= 1e5) return `${(price / 1e5).toFixed(price/1e5 >= 10 ? 1 : 2)} L / month`;
+    return `₹${inr(price)} / month`;
+  }
+  if (price >= 1e7) return `₹${(price / 1e7).toFixed(2)} Cr`;
+  if (price >= 1e5) return `₹${(price / 1e5).toFixed(2)} L`;
+  return `₹${inr(price)}`;
+}
+
+function looksLikeFolder(v: unknown) {
+  return typeof v === "string" && /\/$|\*$/i.test(v);
+}
+
+function expandImages(p?: PropertyRow): string[] {
+  if (!p) return [];
+  const raw = (p as any).images;
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+
+  const text = typeof raw === "string" ? raw.trim() : "";
+
+  // “FOLDER::segment/slug/*” or “segment/slug/*”
+  if (text.startsWith("FOLDER::")) {
+    const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"");
+    return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
+  }
+  if (looksLikeFolder(text)) {
+    const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
+    return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
+  }
+
+  // comma list
+  if (text.includes(",")) {
+    return text.split(",").map(s => s.trim())
+      .filter(Boolean)
+      .map(x => (x.startsWith("http") || x.startsWith("/")) ? x : `/prop-pics/${x}`);
+  }
+
+  // single image
+  if (text) {
+    return [(text.startsWith("http") || text.startsWith("/")) ? text : `/prop-pics/${text}`];
+  }
+  return [];
+}
+
+/* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [rows, setRows] = useState<PropertyRow[]>([]);
@@ -36,64 +75,14 @@ export default function PropertyDetailsPage() {
         if (alive) setLoading(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
+  // IMPORTANT: do not touch property until rows are loaded
   const property = useMemo(
-    () => rows.find((p) => p.id === id),
+    () => rows.find(p => String(p.id) === String(id)),
     [rows, id]
   );
-
-  // ----- Gallery images (auto-discover from folder shorthand) -----
-  const imgs = expandImages(property.images);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!property) return;
-      const raw = property.images || [];
-
-      // If Sheet gave "FOLDER::<path>" (from normalizeImages)
-      const folderToken = raw.find((x) => typeof x === "string" && x.startsWith("FOLDER::"));
-      if (folderToken) {
-        const folder = folderToken.replace("FOLDER::", "");
-        const found = await discoverImages(folder, 20);
-        if (!alive) return;
-        setImgs(found);
-        setLoadingImages(false);
-        return;
-      }
-
-      // If older shorthand like "residential/Beaumonde-903A"
-      if (raw.length === 1 && looksLikeFolder(raw[0])) {
-        const found = await discoverImages(raw[0], 20);
-        if (!alive) return;
-        setImgs(found);
-        setLoadingImages(false);
-        return;
-      }
-
-      // Else normal explicit list
-      setImgs(raw.filter(Boolean));
-      setLoadingImages(false);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [property]);
-
-  // ----- UI state: gallery -----
-  const [i, setI] = useState(0);
-  const [fit, setFit] = useState<"contain" | "cover">("contain");
-
-  // ----- WhatsApp link -----
-  const whatsappNumber = "919920214015";
-  const waText = property
-    ? `Hi, I'm interested in ${property.title} (${priceFormat(property.price, property.listingFor)}). Please share details.`
-    : `Hi, I'm interested in a property. Please share details.`;
-  const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waText)}`;
 
   if (loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -102,208 +91,148 @@ export default function PropertyDetailsPage() {
   if (!property) {
     return (
       <div className="pt-24 max-w-5xl mx-auto p-6">
-        <h2 className="text-2xl font-bold">Property not found</h2>
-        <Link
-          to="/properties"
-          className="mt-4 inline-block bg-navy-900 text-white px-4 py-2 rounded"
-        >
+        <nav className="text-sm text-gray-500 mb-4">
+          <Link to="/" className="hover:underline">Home</Link> <span className="mx-1">/</span>
+          <Link to="/properties" className="hover:underline">Properties</Link> <span className="mx-1">/</span>
+          <span>Not found</span>
+        </nav>
+        <h1 className="text-2xl font-semibold">Property not found</h1>
+        <p className="mt-2 text-gray-600">The listing you’re looking for doesn’t exist or was removed.</p>
+        <Link to="/properties" className="inline-block mt-6 px-5 py-3 bg-navy-900 text-white rounded-lg">
           Back to Properties
         </Link>
       </div>
     );
   }
 
+  // SAFE: only compute images after property exists
+  const imgs = expandImages(property);
+  const [index, setIndex] = useState(0);
+  const [fit, setFit] = useState<"contain"|"cover">("contain");
+  const prev = () => setIndex(i => (i - 1 + imgs.length) % imgs.length);
+  const next = () => setIndex(i => (i + 1) % imgs.length);
+  const goto = (i: number) => setIndex(i);
+
+  const waNumber = "919920214015";
+  const waText = `Hi, I'm interested in ${property.title} (${priceLabel(property.price, property.listingFor)}). Please share details.`;
+  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
+
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
-        {/* Breadcrumb */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 py-10">
+        {/* Breadcrumbs */}
         <nav className="text-sm text-gray-500">
-          <Link to="/" className="underline">Home</Link> /{" "}
-          <Link to="/properties" className="underline">Properties</Link> / {property.title}
+          <Link to="/" className="hover:underline">Home</Link>
+          <span className="mx-1">/</span>
+          <Link to="/properties" className="hover:underline">Properties</Link>
+          <span className="mx-1">/</span>
+          <span className="text-gray-700">{property.title}</span>
         </nav>
 
         {/* Header */}
-        <div className="flex justify-between items-start gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{property.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold">{property.title}</h1>
             {property.location ? (
-              <p className="flex gap-2 text-gray-600 items-center">
-                <MapPin size={18} />
-                {property.location}
+              <p className="text-gray-600 flex items-center gap-2 mt-1">
+                <MapPin size={18} /> {property.location}
               </p>
             ) : null}
           </div>
-          <span className="bg-navy-900 text-white px-4 py-2 rounded text-lg font-semibold">
-            {priceFormat(property.price, property.listingFor)}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="inline-block bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold">
+              {priceLabel(property.price, property.listingFor)}
+            </span>
+            <a href={waLink} target="_blank" rel="noreferrer"
+               className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">
+              <MessageCircle size={18}/> Enquire on WhatsApp
+            </a>
+            <a href="tel:+919920214015"
+               className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-semibold">
+              <Phone size={18}/> Call Now
+            </a>
+          </div>
         </div>
 
         {/* Gallery */}
         <div className="bg-white rounded-2xl shadow overflow-hidden">
-          {/* Main viewer */}
-          <div className="relative aspect-[16/9] bg-black/5">
-            {!loadingImages && imgs.length > 0 ? (
+          {imgs.length ? (
+            <div className="relative aspect-[16/9] bg-black/5">
               <img
-                src={imgs[i]}
-                alt={`${property.title} ${i + 1}`}
+                src={imgs[index]}
+                alt={`${property.title} ${index + 1}`}
                 className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
                 loading="eager"
               />
-            ) : (
-              <div className="w-full h-full grid place-items-center text-gray-500">
-                {loadingImages ? "Loading photos…" : "Photos coming soon"}
-              </div>
-            )}
-
-            {/* Prev/Next */}
-            {imgs.length > 1 && (
-              <>
-                <button
-                  onClick={() => setI((prev) => (prev - 1 + imgs.length) % imgs.length)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
-                  aria-label="Previous photo"
-                >
-                  <ChevronLeft />
-                </button>
-                <button
-                  onClick={() => setI((prev) => (prev + 1) % imgs.length)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow"
-                  aria-label="Next photo"
-                >
-                  <ChevronRight />
-                </button>
-              </>
-            )}
-
-            {/* Fit / Fill toggle */}
-            {imgs.length > 0 && (
+              {imgs.length > 1 && (
+                <>
+                  <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronLeft/></button>
+                  <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronRight/></button>
+                </>
+              )}
               <button
-                onClick={() => setFit((f) => (f === "contain" ? "cover" : "contain"))}
-                className="absolute bottom-3 right-3 bg-white/90 hover:bg-white rounded-md px-3 py-1 text-xs font-medium shadow"
-                title={fit === "contain" ? "Switch to Fill (cover)" : "Switch to Fit (contain)"}
+                onClick={() => setFit(f => f === "contain" ? "cover" : "contain")}
+                className="absolute bottom-3 right-3 bg-white/90 rounded-md px-3 py-1 text-xs font-medium shadow"
               >
                 {fit === "contain" ? "Fit" : "Fill"}
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="p-12 text-center text-gray-500">Photos coming soon</div>
+          )}
 
           {/* Thumbnails */}
           {imgs.length > 1 && (
-            <div className="p-3 bg-gray-50">
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                {imgs.map((src, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setI(idx)}
-                    className={`relative h-16 rounded-md overflow-hidden ring-2 ${
-                      idx === i ? "ring-brand-500" : "ring-transparent hover:ring-gray-300"
-                    }`}
-                    aria-label={`Photo ${idx + 1}`}
-                  >
-                    <img
-                      src={src}
-                      alt={`thumb ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-gray-50">
+              {imgs.map((src, i) => (
+                <button key={i} onClick={() => goto(i)}
+                        className={`h-20 rounded overflow-hidden border ${i === index ? "border-brand-600 ring-2 ring-brand-300" : "border-transparent"}`}>
+                  <img src={src} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Details + Enquiry */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Overview */}
-          <div className="bg-white p-6 rounded-lg shadow space-y-4 md:col-span-2">
+        {/* Facts + Enquiry */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow p-6 space-y-6">
             <h2 className="text-xl font-semibold">Overview</h2>
-            {property.description ? (
-              <p>{property.description}</p>
-            ) : (
-              <p className="text-gray-600">Details to be updated.</p>
-            )}
+            {property.description ? <p className="text-gray-700">{property.description}</p> : null}
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {property.bedrooms ? (
-                <div className="flex gap-2 items-center">
-                  <Bed size={18} /> {property.bedrooms} Bedrooms
-                </div>
-              ) : null}
-              {property.bathrooms ? (
-                <div className="flex gap-2 items-center">
-                  <Bath size={18} /> {property.bathrooms} Bathrooms
-                </div>
-              ) : null}
-              {property.areaSqft ? (
-                <div className="flex gap-2 items-center">
-                  <Square size={18} /> {property.areaSqft} sq ft
-                </div>
-              ) : null}
-              {property.propertyType ? (
-                <div className="flex gap-2 items-center">
-                  {property.propertyType}
-                </div>
-              ) : null}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              {property.bedrooms ? <div className="flex items-center gap-2"><Bed size={18}/> <span className="font-medium">{property.bedrooms} Bedrooms</span></div> : null}
+              {property.bathrooms ? <div className="flex items-center gap-2"><Bath size={18}/> <span className="font-medium">{property.bathrooms} Bathrooms</span></div> : null}
+              {property.areaSqft ? <div className="flex items-center gap-2"><Square size={18}/> <span className="font-medium">{property.areaSqft} sq ft</span></div> : null}
+              {property.propertyType ? <div className="flex items-center gap-2"><span className="font-medium">{property.propertyType}</span></div> : null}
             </div>
           </div>
 
-          {/* Enquiry Card */}
-          <aside className="bg-white p-6 rounded-lg shadow h-max">
-            <div className="text-2xl font-semibold mb-1">
-              {priceFormat(property.price, property.listingFor)}
-            </div>
-            {property.location ? (
-              <div className="text-sm text-gray-600 mb-4">{property.location}</div>
-            ) : null}
-
-            <div className="space-y-3 mt-2">
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 
-                backdrop-blur-md bg-green-600/20 border border-green-400/40 
-                hover:bg-green-500/30 transition-all py-3 rounded-xl font-semibold 
-                text-green-600 hover:text-green-700 shadow-lg hover:shadow-green-500/30"
-              >
-                <MessageCircle size={20} className="text-green-500" />
-                WhatsApp
-              </a>
-
-              <a
-                href="tel:+919920214015"
-                className="w-full flex items-center justify-center gap-2 
-                backdrop-blur-md bg-black/20 border border-black/40 
-                hover:bg-black/40 transition-all py-3 rounded-xl font-semibold 
-                text-black hover:text-white shadow-lg hover:shadow-black/30"
-              >
-                <Phone size={20} className="text-black" />
-                Call Now
-              </a>
-            </div>
+          <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
+            <div className="text-2xl font-semibold mb-2">{priceLabel(property.price, property.listingFor)}</div>
+            {property.location ? <div className="text-sm text-gray-600 mb-4">{property.location}</div> : null}
+            <a href={waLink} target="_blank" rel="noreferrer"
+               className="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
+              <MessageCircle size={18}/> Enquire on WhatsApp
+            </a>
+            <a href="tel:+919920214015"
+               className="w-full mt-3 inline-flex items-center justify-center gap-2 bg-navy-900 hover:bg-brand-600 text-white px-4 py-3 rounded-lg font-semibold">
+              <Phone size={18}/> Call Sahai Estates
+            </a>
+            <p className="text-xs text-gray-500 mt-4">RERA No: A51900001512</p>
           </aside>
         </div>
       </div>
 
-      {/* Floating buttons */}
-      <a
-        href={waLink}
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full 
-        shadow-xl hover:scale-110 hover:bg-green-700 transition-all backdrop-blur-xl"
-        aria-label="WhatsApp"
-      >
+      {/* Floating actions */}
+      <a href={waLink} target="_blank" rel="noreferrer"
+         className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full shadow-xl hover:scale-110 hover:bg-green-700 transition-all"
+         aria-label="WhatsApp">
         <MessageCircle size={26} />
       </a>
-
-      <a
-        href="tel:+919920214015"
-        className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full 
-        shadow-xl hover:scale-110 hover:bg-gray-800 transition-all backdrop-blur-xl"
-        aria-label="Call"
-      >
+      <a href="tel:+919920214015"
+         className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full shadow-xl hover:scale-110 hover:bg-gray-800 transition-all"
+         aria-label="Call">
         <Phone size={26} />
       </a>
     </div>
