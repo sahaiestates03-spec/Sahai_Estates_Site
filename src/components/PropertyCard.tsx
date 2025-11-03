@@ -1,4 +1,5 @@
 // src/components/PropertyCard.tsx
+import { expandImages } from "../utils/normalize";
 import { Link } from 'react-router-dom';
 import { priceFormat } from "../utils/price";
 import { looksLikeFolder } from "../utils/autoImages";
