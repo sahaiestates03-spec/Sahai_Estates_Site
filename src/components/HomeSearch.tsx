@@ -15,7 +15,7 @@ const POPULAR_LOCALITIES = [
 const SALE_BUDGETS = [
   { label: 'Up to ₹50 L', min: '0',          max: '5000000'   }, // 50 L
   { label: '₹50 L – ₹1 Cr', min: '5000000',   max: '10000000'  },
-  { label: '₹1 – ₹2 Cr',    min: '10000000',  max: '20000000'  },
+  { label: ''Up to ₹2 Cr',    min: '0',       max: '20000000'  },
   { label: '₹2 – ₹5 Cr',    min: '20000000',  max: '50000000'  },
   { label: '₹5 – ₹10 Cr',   min: '50000000',  max: '100000000' },
   { label: '₹10 Cr+',       min: '100000000', max: ''          },
@@ -23,7 +23,7 @@ const SALE_BUDGETS = [
 
 const RENT_BUDGETS = [
   { label: 'Up to ₹50k / month', min: '0',        max: '50000'   },
-  { label: '₹50k – ₹1L / month', min: '50000',    max: '100000'  },
+  { label: 'Up to ₹1L / month', min: '0',        max: '100000'  },
   { label: '₹1L – ₹2L / month',  min: '100000',   max: '200000'  },
   { label: '₹2L – ₹3L / month',  min: '200000',   max: '300000'  },
   { label: '₹3L – ₹5L / month',  min: '300000',   max: '500000'  },
