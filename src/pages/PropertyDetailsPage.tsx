@@ -7,6 +7,17 @@ import {
 } from "lucide-react";
 
 /* ---------- helpers ---------- */
+const sluggify = (s?: string | null) =>
+  (s || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const same = (a?: string | null, b?: string | null) =>
+  (a || "").toLowerCase() === (b || "").toLowerCase();
+
 function inr(n: number) { return n.toLocaleString("en-IN"); }
 
 function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construction") {
@@ -30,6 +41,8 @@ function expandImages(p?: PropertyRow): string[] {
   if (Array.isArray(raw)) return raw.filter(Boolean);
 
   const text = typeof raw === "string" ? raw.trim() : "";
+
+  // “FOLDER::segment/slug/*” or “segment/slug/*”
   if (text.startsWith("FOLDER::")) {
     const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"");
     return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
@@ -38,11 +51,15 @@ function expandImages(p?: PropertyRow): string[] {
     const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
     return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
   }
+
+  // comma list
   if (text.includes(",")) {
     return text.split(",").map(s => s.trim())
       .filter(Boolean)
       .map(x => (x.startsWith("http") || x.startsWith("/")) ? x : `/prop-pics/${x}`);
   }
+
+  // single image
   if (text) {
     return [(text.startsWith("http") || text.startsWith("/")) ? text : `/prop-pics/${text}`];
   }
@@ -51,7 +68,9 @@ function expandImages(p?: PropertyRow): string[] {
 
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
+  // We keep the param name ":slug" in the route, but we’ll match by slug OR id OR slug(title)
   const { slug } = useParams<{ slug: string }>();
+  const key = sluggify(String(slug || ""));
 
   const [rows, setRows] = useState<PropertyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,10 +89,16 @@ export default function PropertyDetailsPage() {
     return () => { alive = false; };
   }, []);
 
-  const property = useMemo(
-    () => rows.find(p => p.slug?.toLowerCase() === String(slug).toLowerCase()),
-    [rows, slug]
-  );
+  const property = useMemo(() => {
+    if (!rows.length || !key) return null;
+    // Try slug, then id, then slugified title
+    return (
+      rows.find(r => same(r.slug, key)) ||
+      rows.find(r => same(sluggify(r.id as any), key) || same(String(r.id || ""), slug)) ||
+      rows.find(r => same(sluggify(r.title as any), key)) ||
+      null
+    );
+  }, [rows, key, slug]);
 
   if (loading) return <div className="pt-40 text-center text-gray-500">Loading...</div>;
 
@@ -81,11 +106,12 @@ export default function PropertyDetailsPage() {
     return (
       <div className="pt-24 max-w-5xl mx-auto p-6">
         <nav className="text-sm text-gray-500 mb-4">
-          <Link to="/" className="hover:underline">Home</Link> /{" "}
-          <Link to="/properties" className="hover:underline">Properties</Link> /{" "}
+          <Link to="/" className="hover:underline">Home</Link> <span className="mx-1">/</span>
+          <Link to="/properties" className="hover:underline">Properties</Link> <span className="mx-1">/</span>
           <span>Not found</span>
         </nav>
         <h1 className="text-2xl font-semibold">Property not found</h1>
+        <p className="mt-2 text-gray-600">The listing you’re looking for doesn’t exist or was removed.</p>
         <Link to="/properties" className="inline-block mt-6 px-5 py-3 bg-black text-white rounded-lg">
           Back to Properties
         </Link>
@@ -96,46 +122,47 @@ export default function PropertyDetailsPage() {
   const imgs = expandImages(property);
   const [index, setIndex] = useState(0);
   const [fit, setFit] = useState<"contain"|"cover">("contain");
-
   const prev = () => setIndex(i => (i - 1 + imgs.length) % imgs.length);
   const next = () => setIndex(i => (i + 1) % imgs.length);
   const goto = (i: number) => setIndex(i);
 
   const waNumber = "919920214015";
-  const waText = `Hi, I'm interested in ${property.title} (${priceLabel(property.price, property.listingFor)}).`;
+  const waText = `Hi, I'm interested in ${property.title} (${priceLabel(property.price, property.listingFor)}). Please share details.`;
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 py-10">
-
+        {/* Breadcrumbs */}
         <nav className="text-sm text-gray-500">
-          <Link to="/" className="hover:underline">Home</Link> /{" "}
-          <Link to="/properties" className="hover:underline">Properties</Link> /{" "}
+          <Link to="/" className="hover:underline">Home</Link>
+          <span className="mx-1">/</span>
+          <Link to="/properties" className="hover:underline">Properties</Link>
+          <span className="mx-1">/</span>
           <span className="text-gray-700">{property.title}</span>
         </nav>
 
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-serif font-bold">{property.title}</h1>
-            {property.location && (
+            {property.location ? (
               <p className="text-gray-600 flex items-center gap-2 mt-1">
                 <MapPin size={18} /> {property.location}
               </p>
-            )}
+            ) : null}
           </div>
-
           <div className="flex items-center gap-3">
             <span className="inline-block bg-black text-white px-4 py-2 rounded-lg font-semibold">
               {priceLabel(property.price, property.listingFor)}
             </span>
             <a href={waLink} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">
-              <MessageCircle size={18}/> WhatsApp
+               className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">
+              <MessageCircle size={18}/> Enquire on WhatsApp
             </a>
             <a href="tel:+919920214015"
-              className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold">
-              <Phone size={18}/> Call
+               className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold">
+              <Phone size={18}/> Call Now
             </a>
           </div>
         </div>
@@ -146,8 +173,9 @@ export default function PropertyDetailsPage() {
             <div className="relative aspect-[16/9] bg-black/5">
               <img
                 src={imgs[index]}
-                alt={property.title}
+                alt={`${property.title} ${index + 1}`}
                 className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
+                loading="eager"
               />
               {imgs.length > 1 && (
                 <>
@@ -166,44 +194,60 @@ export default function PropertyDetailsPage() {
             <div className="p-12 text-center text-gray-500">Photos coming soon</div>
           )}
 
+          {/* Thumbnails */}
           {imgs.length > 1 && (
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-gray-50">
               {imgs.map((src, i) => (
                 <button key={i} onClick={() => goto(i)}
-                  className={`h-20 rounded overflow-hidden border ${i === index ? "border-black ring-2 ring-gray-400" : "border-transparent"}`}>
-                  <img src={src} className="w-full h-full object-cover" />
+                        className={`h-20 rounded overflow-hidden border ${i === index ? "border-black ring-2 ring-gray-400" : "border-transparent"}`}>
+                  <img src={src} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Details */}
+        {/* Facts + Enquiry */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white rounded-2xl shadow p-6 space-y-6">
             <h2 className="text-xl font-semibold">Overview</h2>
-            {property.description && <p className="text-gray-700">{property.description}</p>}
+            {property.description ? <p className="text-gray-700">{property.description}</p> : null}
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-              {property.bedrooms && <div className="flex items-center gap-2"><Bed size={18}/> {property.bedrooms} Bedrooms</div>}
-              {property.bathrooms && <div className="flex items-center gap-2"><Bath size={18}/> {property.bathrooms} Bathrooms</div>}
-              {property.areaSqft && <div className="flex items-center gap-2"><Square size={18}/> {property.areaSqft} sq ft</div>}
-              {property.propertyType && <div className="font-medium">{property.propertyType}</div>}
+              {property.bedrooms ? <div className="flex items-center gap-2"><Bed size={18}/> <span className="font-medium">{property.bedrooms} Bedrooms</span></div> : null}
+              {property.bathrooms ? <div className="flex items-center gap-2"><Bath size={18}/> <span className="font-medium">{property.bathrooms} Bathrooms</span></div> : null}
+              {property.areaSqft ? <div className="flex items-center gap-2"><Square size={18}/> <span className="font-medium">{property.areaSqft} sq ft</span></div> : null}
+              {property.propertyType ? <div className="flex items-center gap-2"><span className="font-medium">{property.propertyType}</span></div> : null}
             </div>
           </div>
 
           <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
             <div className="text-2xl font-semibold mb-2">{priceLabel(property.price, property.listingFor)}</div>
-            <a href={waLink} className="w-full inline-flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg font-semibold" target="_blank"><MessageCircle size={18}/> WhatsApp</a>
-            <a href="tel:+919920214015" className="w-full mt-3 inline-flex items-center justify-center gap-2 bg-black text-white px-4 py-3 rounded-lg font-semibold"><Phone size={18}/> Call</a>
+            {property.location ? <div className="text-sm text-gray-600 mb-4">{property.location}</div> : null}
+            <a href={waLink} target="_blank" rel="noreferrer"
+               className="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
+              <MessageCircle size={18}/> Enquire on WhatsApp
+            </a>
+            <a href="tel:+919920214015"
+               className="w-full mt-3 inline-flex items-center justify-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-3 rounded-lg font-semibold">
+              <Phone size={18}/> Call Sahai Estates
+            </a>
             <p className="text-xs text-gray-500 mt-4">RERA No: A51900001512</p>
           </aside>
         </div>
       </div>
 
-      {/* Floating buttons */}
-      <a href={waLink} target="_blank" className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full shadow-xl"><MessageCircle size={26} /></a>
-      <a href="tel:+919920214015" className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full shadow-xl"><Phone size={26} /></a>
+      {/* Floating actions */}
+      <a href={waLink} target="_blank" rel="noreferrer"
+         className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full shadow-xl hover:scale-110 hover:bg-green-700 transition-all"
+         aria-label="WhatsApp">
+        <MessageCircle size={26} />
+      </a>
+      <a href="tel:+919920214015"
+         className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full shadow-xl hover:scale-110 hover:bg-gray-800 transition-all"
+         aria-label="Call">
+        <Phone size={26} />
+      </a>
     </div>
   );
 }
