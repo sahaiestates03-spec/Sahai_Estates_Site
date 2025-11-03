@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
 import {
   MapPin, Bed, Bath, Square, Phone, MessageCircle,
@@ -42,7 +42,6 @@ function expandImages(p?: PropertyRow): string[] {
 
   const text = typeof raw === "string" ? raw.trim() : "";
 
-  // “FOLDER::segment/slug/*” or “segment/slug/*”
   if (text.startsWith("FOLDER::")) {
     const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"");
     return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
@@ -51,15 +50,11 @@ function expandImages(p?: PropertyRow): string[] {
     const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
     return Array.from({ length: 12 }, (_, i) => `/prop-pics/${folder}/${i+1}.jpg`);
   }
-
-  // comma list
   if (text.includes(",")) {
     return text.split(",").map(s => s.trim())
       .filter(Boolean)
       .map(x => (x.startsWith("http") || x.startsWith("/")) ? x : `/prop-pics/${x}`);
   }
-
-  // single image
   if (text) {
     return [(text.startsWith("http") || text.startsWith("/")) ? text : `/prop-pics/${text}`];
   }
@@ -68,12 +63,15 @@ function expandImages(p?: PropertyRow): string[] {
 
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
-  // We keep the param name ":slug" in the route, but we’ll match by slug OR id OR slug(title)
   const { slug } = useParams<{ slug: string }>();
   const key = sluggify(String(slug || ""));
+  const location = useLocation() as { state?: { property?: PropertyRow } };
+
+  // 1) if we came from a card, use that immediately
+  const propFromState = location?.state?.property ?? null;
 
   const [rows, setRows] = useState<PropertyRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(!propFromState); // if we already have state, no initial loader
 
   useEffect(() => {
     let alive = true;
@@ -89,29 +87,47 @@ export default function PropertyDetailsPage() {
     return () => { alive = false; };
   }, []);
 
-  const property = useMemo(() => {
+  // 2) robust matching against sheet data
+  const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
-    // Try slug, then id, then slugified title
     return (
-      rows.find(r => same(r.slug, key)) ||
+      rows.find(r => same(sluggify(r.slug as any), key) || same(r.slug as any, key)) ||
       rows.find(r => same(sluggify(r.id as any), key) || same(String(r.id || ""), slug)) ||
       rows.find(r => same(sluggify(r.title as any), key)) ||
       null
     );
   }, [rows, key, slug]);
 
-  if (loading) return <div className="pt-40 text-center text-gray-500">Loading...</div>;
+  const property = propFromState || propFromSheet || null;
+
+  if (!property && loading) {
+    return <div className="pt-40 text-center text-gray-500">Loading...</div>;
+  }
 
   if (!property) {
+    // helpful suggestions to debug if nothing matches
+    const sample = rows.slice(0, 10).map(r =>
+      sluggify((r.slug as any) || (r.id as any) || (r.title as any))
+    );
     return (
       <div className="pt-24 max-w-5xl mx-auto p-6">
         <nav className="text-sm text-gray-500 mb-4">
-          <Link to="/" className="hover:underline">Home</Link> <span className="mx-1">/</span>
-          <Link to="/properties" className="hover:underline">Properties</Link> <span className="mx-1">/</span>
+          <Link to="/" className="hover:underline">Home</Link> /{" "}
+          <Link to="/properties" className="hover:underline">Properties</Link> /{" "}
           <span>Not found</span>
         </nav>
         <h1 className="text-2xl font-semibold">Property not found</h1>
-        <p className="mt-2 text-gray-600">The listing you’re looking for doesn’t exist or was removed.</p>
+        {rows.length > 0 && (
+          <div className="mt-3 text-sm text-gray-600">
+            Try one of these available slugs:&nbsp;
+            {sample.map((s, i) => (
+              <span key={i}>
+                <Link to={`/properties/${encodeURIComponent(s)}`} className="text-blue-600 underline">{s}</Link>
+                {i < sample.length - 1 ? ", " : ""}
+              </span>
+            ))}
+          </div>
+        )}
         <Link to="/properties" className="inline-block mt-6 px-5 py-3 bg-black text-white rounded-lg">
           Back to Properties
         </Link>
