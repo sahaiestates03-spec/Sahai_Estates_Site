@@ -64,15 +64,16 @@ function expandImages(p?: PropertyRow): string[] {
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
-  if (!slug) return null; 
+  if (!slug) return null; // ✅ do NOT render on /properties?...
+
   const key = sluggify(String(slug || ""));
   const location = useLocation() as { state?: { property?: PropertyRow } };
 
-  // 1) if we came from a card, use that immediately
+  // if we came from a card, use that immediately
   const propFromState = location?.state?.property ?? null;
 
   const [rows, setRows] = useState<PropertyRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(!propFromState); // if we already have state, no initial loader
+  const [loading, setLoading] = useState<boolean>(!propFromState);
 
   useEffect(() => {
     let alive = true;
@@ -88,7 +89,7 @@ export default function PropertyDetailsPage() {
     return () => { alive = false; };
   }, []);
 
-  // 2) robust matching against sheet data
+  // robust matching against sheet data
   const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
     return (
