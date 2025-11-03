@@ -1,24 +1,13 @@
 import { useRef, useState } from "react";
 
-// simple zip via JSZip (optional). If you don't have it, we can skip compression.
-// npm i jszip file-saver  (optional enhancement)
-let JSZip: any = null;
-let saveAs: any = null;
-(async () => {
-  try {
-    JSZip = (await import("jszip")).default;
-    saveAs = (await import("file-saver")).saveAs;
-  } catch {}
-})();
-
 type Picked = { file: File; url: string };
 
 export default function AdminUpload() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<Picked[]>([]);
   const [folder, setFolder] = useState<string>("residential/Example-Property");
-  const [segment, setSegment] = useState<"residential"|"commercial">("residential");
-  const [listingFor, setListingFor] = useState<"resale"|"rent"|"under-construction">("resale");
+  const [segment, setSegment] = useState<"residential" | "commercial">("residential");
+  const [listingFor, setListingFor] = useState<"resale" | "rent" | "under-construction">("resale");
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = Array.from(e.target.files || []);
@@ -40,27 +29,35 @@ export default function AdminUpload() {
     .map((_, i) => `${folder.replace(/^\/+|\/+$/g, "")}/${i + 1}.jpg`)
     .join(", ");
 
+  // If you want to store a shorthand (and let frontend auto-expand /1.jpg,/2.jpg…)
   const imagesFolderShorthand = `${folder.replace(/^\/+|\/+$/g, "")}/*`;
 
+  /** Create a zip named after the folder and download it */
   const downloadZip = async () => {
-    if (!JSZip || !saveAs) {
-      alert("ZIP libraries not loaded. You can manually rename & commit the images.");
-      return;
+    try {
+      // Lazy import (keeps main bundle small & avoids SSR import issues)
+      const { default: JSZip } = await import("jszip");
+      const { saveAs } = await import("file-saver");
+
+      const zip = new JSZip();
+      const base = folder.replace(/^\/+|\/+$/g, "");
+      files.forEach((p, i) => {
+        zip.file(`${base}/${i + 1}.jpg`, p.file);
+      });
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      saveAs(blob, `${base.replace(/[\/]+/g, "_")}.zip`);
+    } catch (err) {
+      console.error(err);
+      alert("Could not create ZIP. Please check console for details.");
     }
-    const zip = new JSZip();
-    const base = folder.replace(/^\/+|\/+$/g, "");
-    files.forEach((p, i) => {
-      zip.file(`${base}/${i + 1}.jpg`, p.file);
-    });
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, `${base.replace(/[\/]+/g, "_")}.zip`);
   };
 
   return (
     <main className="pt-24 max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold">Admin Upload Helper</h1>
       <p className="text-sm text-gray-600">
-        Drag & drop property photos, choose output folder, and copy the Google Sheet values.
+        Drag &amp; drop property photos, choose output folder, and copy the Google Sheet values.
       </p>
 
       <section className="mt-6 grid gap-4">
@@ -109,7 +106,7 @@ export default function AdminUpload() {
           onDragEnter={prevent}
           className="mt-2 border-2 border-dashed rounded-xl p-6 text-center"
         >
-          <p className="mb-2">Drag & drop images here</p>
+          <p className="mb-2">Drag &amp; drop images here</p>
           <button
             onClick={() => inputRef.current?.click()}
             className="px-4 py-2 bg-navy-900 text-white rounded"
@@ -132,31 +129,41 @@ export default function AdminUpload() {
               {files.map((p, i) => (
                 <div key={i} className="rounded border overflow-hidden">
                   <img src={p.url} alt={`img-${i}`} className="w-full h-32 object-cover" />
-                  <div className="text-xs p-2">Will be saved as <b>{i + 1}.jpg</b></div>
+                  <div className="text-xs p-2">
+                    Will be saved as <b>{i + 1}.jpg</b>
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-4 grid gap-2">
               <div>
-                <div className="text-xs font-semibold mb-1">Images (explicit list for Google Sheet)</div>
+                <div className="text-xs font-semibold mb-1">
+                  Images (explicit list for Google Sheet)
+                </div>
                 <textarea
                   readOnly
                   value={imagesList}
                   className="w-full border rounded p-2 text-xs"
                   rows={2}
                 />
-                <p className="text-[11px] text-gray-500">Paste into Sheet "images" column.</p>
+                <p className="text-[11px] text-gray-500">
+                  Paste into Sheet &quot;images&quot; column.
+                </p>
               </div>
 
               <div>
-                <div className="text-xs font-semibold mb-1">Images (folder shorthand for Google Sheet)</div>
+                <div className="text-xs font-semibold mb-1">
+                  Images (folder shorthand for Google Sheet)
+                </div>
                 <input
                   readOnly
                   value={imagesFolderShorthand}
                   className="w-full border rounded p-2 text-xs"
                 />
-                <p className="text-[11px] text-gray-500">Alternatively paste folder shorthand. Site auto-discovers /1.jpg..</p>
+                <p className="text-[11px] text-gray-500">
+                  Alternatively paste folder shorthand. Site auto-discovers /1.jpg, /2.jpg …
+                </p>
               </div>
 
               <div className="flex gap-2">
@@ -165,7 +172,8 @@ export default function AdminUpload() {
                 </button>
                 <a
                   href={`https://github.com/sahaiestates03-spec/Sahai_Estates_Site/tree/main/public/prop-pics`}
-                  target="_blank" rel="noreferrer"
+                  target="_blank"
+                  rel="noreferrer"
                   className="px-4 py-2 border rounded"
                 >
                   Open GitHub /prop-pics
