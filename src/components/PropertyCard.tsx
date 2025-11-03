@@ -43,11 +43,27 @@ function expandCover(prop: AnyProp): string {
   return (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s}`;
 }
 
+/** Make a reliable slug for routing */
+function makeSlug(prop: AnyProp): string | null {
+  const s = prop?.slug;
+  if (typeof s === "string" && s.trim()) {
+    return s.trim().toLowerCase();
+  }
+  const fromTitle = prop?.title ?? prop?.name;
+  if (typeof fromTitle === "string" && fromTitle.trim()) {
+    return fromTitle
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+  return null;
+}
+
 export default function PropertyCard({ property }: PropertyCardProps) {
   if (!property) return null;
 
-  const id =
-    property.id ?? property.slug ?? property._id ?? null;
+  const slug = makeSlug(property); // ✅ always prefer slug for route
 
   const title: string =
     property.title ?? property.name ?? "Property";
@@ -148,9 +164,9 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           {areaSqft ? <span>📐 {areaSqft} sq ft</span> : null}
         </div>
 
-        {id ? (
+        {slug ? (
           <Link
-            to={`/properties/${id}`}
+            to={`/properties/${encodeURIComponent(slug)}`} // ✅ route matches /properties/:slug
             className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-semibold"
           >
             View Details →
