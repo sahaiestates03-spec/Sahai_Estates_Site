@@ -39,14 +39,10 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const areaSqft: number | undefined = property.areaSqft ?? property.sizeSqft ?? property.builtUp ?? undefined;
 
   // cover image (folder shorthand -> /1.jpg)
-  let cover: string =
-    property.images?.[0] ?? property.cover ?? property.image ?? '/placeholder.jpg';
+  // Get resolved images (supports folder shorthand like "residential/Beaumonde/*")
+const coverList = expandImages(property.images || []);
+const cover: string = coverList[0] || property.cover || property.image || "/placeholder.jpg";
 
-  if (typeof cover === 'string' && cover.startsWith("FOLDER::")) {
-    cover = `/prop-pics/${cover.replace("FOLDER::", "")}/1.jpg`;
-  } else if (typeof cover === 'string' && looksLikeFolder(cover)) {
-    cover = `/prop-pics/${cover.replace(/^\/+/, "")}/1.jpg`;
-  }
 
   const priceNum: number | undefined =
     typeof property.price === 'number'
