@@ -22,144 +22,72 @@ export type PropertyRow = {
 
 const SHEET_RAW = import.meta.env.VITE_SHEET_ID?.trim() || ''
 const CACHE_MIN = Number(import.meta.env.VITE_SHEET_CACHE_MIN || 10)
-const LOCAL_PREFIX = '/prop-pics/'
+// src/data/sheet.ts (add or replace these helpers)
 
-// ✅ NEW — intelligently resolve final CSV URL
-function resolveCsvUrl(): string | null {
-  if (!SHEET_RAW) return null
-
-  // If user pasted a FULL publish-to-web URL → use AS-IS
-  if (/^https?:\/\//i.test(SHEET_RAW)) {
-    return SHEET_RAW
-  }
-
-  // Otherwise assume it's a plain Sheet ID
-  return `https://docs.google.com/spreadsheets/d/${SHEET_RAW}/gviz/tq?tqx=out:csv&gid=0`
-}
-
-function parsePrice(v?: string) {
-  if (!v) return undefined
-  const s = v.toString().trim().toLowerCase()
-  if (s.includes('cr')) {
-    const n = Number((s.match(/[\d.]+/)?.[0] || '').replace(/,/g, ''))
-    return Number.isFinite(n) ? Math.round(n * 1e7) : undefined
-  }
-  if (s.includes('lakh') || s.includes('lac')) {
-    const n = Number((s.match(/[\d.]+/)?.[0] || '').replace(/,/g, ''))
-    return Number.isFinite(n) ? Math.round(n * 1e5) : undefined
-  }
-  const n = Number(s.replace(/[^\d]/g, ''))
-  return Number.isFinite(n) && n > 0 ? n : undefined
-}
-
-function cleanNum(v?: string) {
-  if (!v) return undefined;
-  const n = Number(String(v).replace(/[^\d.]/g, ''));
-  return Number.isFinite(n) ? n : undefined;
-}
-
-
-function parseCSV(text: string): RawRow[] {
-  // RFC4180-ish CSV parser that handles quotes, commas, CRLF
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-
-    if (ch === '"') {
-      // Escaped quote inside a quoted cell ("")
-      if (inQuotes && text[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    // Comma separates cells when we are not in quotes
-    if (ch === ',' && !inQuotes) {
-      row.push(cell);
-      cell = '';
-      continue;
-    }
-
-    // Newline (CR or LF) ends the row when not in quotes
-    if ((ch === '\n' || ch === '\r') && !inQuotes) {
-      // Push the last cell if this line had any content
-      if (cell.length || row.length) {
-        row.push(cell);
-        rows.push(row);
-        row = [];
-        cell = '';
-      }
-      // Skip the paired \n after \r\n
-      if (ch === '\r' && text[i + 1] === '\n') i++;
-      continue;
-    }
-
-    cell += ch;
-  }
-
-  // Flush any remaining cell/row
-  if (cell.length || row.length) {
-    row.push(cell);
-    rows.push(row);
-  }
-
-  if (!rows.length) return [];
-
-  // Build objects with case-insensitive headers
-  const headerLine = rows.shift()!;
-  const headers = headerLine.map(h => h.trim().toLowerCase());
-
-  return rows
-    .filter(r => r.length && r.some(x => x.trim().length))
-    .map(cols => {
-      const obj: RawRow = {};
-      headers.forEach((h, i) => {
-        // Trim surrounding spaces
-        let v = (cols[i] ?? '').trim();
-        obj[h] = v;
-      });
-      return obj;
-    });
-}
-
-
-function normalizeSegment(s?: string) {
-  if (!s) return undefined
-  const t = s.toLowerCase()
-  if (t.includes('res')) return 'residential'
-  if (t.includes('com') || t.includes('office')) return 'commercial'
-  return undefined
-}
-
-function normalizeFor(s?: string) {
-  if (!s) return undefined
-  const t = s.toLowerCase()
-  if (t.includes('rent') || t.includes('lease')) return 'rent'
-  if (t.includes('launch') || t.includes('under') || t === 'uc') return 'under-construction'
-  if (t.includes('sale') || t.includes('resale') || t.includes('buy')) return 'resale'
-  return undefined
-}
+// Prefix for local public folder
+const LOCAL_PREFIX = '/prop-pics/';
 
 function splitList(v?: string) {
-  if (!v) return []
+  if (!v) return [];
   return v
     .split(/[|,]/)
     .map((x) => x.trim())
-    .filter(Boolean)
+    .filter(Boolean);
 }
 
-function normalizeImages(v?: string) {
-  return splitList(v).map((x) =>
-    x.startsWith('http') || x.startsWith('/') ? x : LOCAL_PREFIX + x
-  )
+// Convert any Google Drive style link to a direct "view" URL that loads as an image.
+function normalizeGoogleDriveUrl(url: string) {
+  // examples:
+  // https://drive.google.com/file/d/<ID>/view?usp=sharing
+  // https://drive.google.com/uc?id=<ID>&export=view
+  // https://drive.google.com/open?id=<ID>
+  const idMatch =
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  const id = idMatch?.[1];
+  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
 }
+
+function isHttp(u: string) {
+  return u.startsWith('http://') || u.startsWith('https://');
+}
+
+function hasExt(u: string) {
+  return /\.\w{2,5}$/.test(u);
+}
+
+/**
+ * Accepts:
+ *  - Comma/pipe separated file paths (relative or http)
+ *  - Single folder shorthand "residential/Beaumonde-903A" or "residential/Beaumonde-903A/*"
+ *  - Google Drive URLs (we convert)
+ * Returns array of strings; if a single folder is provided, we store it as a special marker
+ * "FOLDER::<path>" so the component can discover images at runtime.
+ */
+function normalizeImages(v?: string): string[] {
+  if (!v) return [];
+  const single = v.trim();
+
+  // Allow "folder/*" as an explicit shorthand
+  if (single.endsWith('/*')) {
+    const folder = single.slice(0, -2).replace(/^\/+/, '');
+    return [`FOLDER::${folder}`];
+  }
+
+  // If it looks like a single folder (no comma, no extension, not http)
+  if (!single.includes(',') && !hasExt(single) && !isHttp(single)) {
+    return [`FOLDER::${single.replace(/^\/+/, '')}`];
+  }
+
+  // else normal list
+  const arr = splitList(v);
+  return arr.map((x) => {
+    if (isHttp(x)) return normalizeGoogleDriveUrl(x);
+    if (x.startsWith('/')) return x; // absolute from public root
+    return LOCAL_PREFIX + x;         // relative -> /prop-pics/<x>
+  });
+}
+
 
 function bool(v?: string) {
   if (!v) return false
