@@ -22,7 +22,7 @@ export default function Navbar() {
         }
       `}</style>
 
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl bg-white/30 border-b border-white/10 shadow-sm">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <img src="/Sahai Estates 131.png" alt="Sahai Estates" className="h-7 w-auto" />
