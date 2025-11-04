@@ -15,12 +15,13 @@ export default function Navbar() {
             className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12"
           >
             {/* 👉 change src to your exact logo path */}
-            <<img
+            <img
             src="/logo.png"
             alt="Sahai Estates"
-            className="h-12 md:h-14 lg:h-16 w-auto object-contain"
+            className="h-12 md:h-16 lg:h-18 w-auto object-contain"
             loading="eager"
           />
+
 
             <span className="hidden sm:block text-gray-900 font-semibold text-lg md:text-xl">
               Sahai Estates
