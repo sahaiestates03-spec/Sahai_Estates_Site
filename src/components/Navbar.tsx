@@ -1,10 +1,62 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [propOpen, setPropOpen] = useState(false);       // first level: Properties
-  const [subOpen, setSubOpen] = useState<"res" | "com" | null>(null); // second level: Residential/Commercial
+
+  // dropdown states
+  const [propOpen, setPropOpen] = useState(false);
+  const [subOpen, setSubOpen] = useState<"res" | "com" | null>(null);
+
+  // hover-intent timers
+  const propOpenTimer = useRef<number | null>(null);
+  const propCloseTimer = useRef<number | null>(null);
+  const subOpenTimer = useRef<number | null>(null);
+  const subCloseTimer = useRef<number | null>(null);
+
+  const OPEN_DELAY = 120;   // ms (feel free to tweak 120–180)
+  const CLOSE_DELAY = 240;  // ms (close a bit slower)
+
+  function clearTimer(ref: React.MutableRefObject<number | null>) {
+    if (ref.current) {
+      window.clearTimeout(ref.current);
+      ref.current = null;
+    }
+  }
+
+  // ---- PROPERTIES (root) handlers ----
+  const onPropEnter = () => {
+    clearTimer(propCloseTimer);
+    if (!propOpen) {
+      clearTimer(propOpenTimer);
+      propOpenTimer.current = window.setTimeout(() => setPropOpen(true), OPEN_DELAY);
+    }
+  };
+  const onPropLeave = () => {
+    clearTimer(propOpenTimer);
+    clearTimer(subOpenTimer);
+    // close after delay so cursor can travel
+    propCloseTimer.current = window.setTimeout(() => {
+      setPropOpen(false);
+      setSubOpen(null);
+    }, CLOSE_DELAY);
+  };
+
+  // ---- SUBMENU handlers (Residential/Commercial) ----
+  const onSubEnter = (which: "res" | "com") => {
+    clearTimer(subCloseTimer);
+    if (subOpen !== which) {
+      clearTimer(subOpenTimer);
+      subOpenTimer.current = window.setTimeout(() => setSubOpen(which), OPEN_DELAY);
+    }
+  };
+  const onSubLeave = (which: "res" | "com") => {
+    clearTimer(subOpenTimer);
+    subCloseTimer.current = window.setTimeout(() => {
+      // only close if the same submenu was open
+      setSubOpen((s) => (s === which ? null : s));
+    }, CLOSE_DELAY);
+  };
 
   return (
     <nav className="fixed top-0 left-0 w-full z-[200] backdrop-blur-xl bg-white/20 border-b border-white/20 shadow-sm">
@@ -14,7 +66,7 @@ export default function Navbar() {
           {/* LOGO */}
           <Link to="/" className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12" aria-label="Sahai Estates - Home">
             <img
-              src="/logo.png" /* or '/sahai_estates_ultra.png' */
+              src="/logo.png"
               alt="Sahai Estates"
               className="h-12 md:h-14 lg:h-16 w-auto object-contain"
               loading="eager"
@@ -25,18 +77,17 @@ export default function Navbar() {
 
           {/* DESKTOP MENU */}
           <div className="hidden md:flex items-center gap-6 text-gray-900">
-
             <Link to="/" className="hover:text-brand-600 font-medium">Home</Link>
 
-            {/* PROPERTIES (2-level menu) */}
+            {/* PROPERTIES (2-level, with delays) */}
             <div
               className="relative"
-              onMouseEnter={() => setPropOpen(true)}
-              onMouseLeave={() => { setPropOpen(false); setSubOpen(null); }}
+              onMouseEnter={onPropEnter}
+              onMouseLeave={onPropLeave}
             >
               <button
                 type="button"
-                onClick={() => setPropOpen(v => !v)}
+                onClick={() => setPropOpen((v) => !v)}
                 className="hover:text-brand-600 font-medium inline-flex items-center gap-1"
                 aria-haspopup="menu"
                 aria-expanded={propOpen}
@@ -49,16 +100,16 @@ export default function Navbar() {
                   className="absolute left-0 top-full mt-2 min-w-64 bg-white/95 backdrop-blur-xl border border-gray-200/70 rounded-xl shadow-lg p-2 z-[300]"
                   role="menu"
                 >
-                  {/* Residential (submenu trigger) */}
+                  {/* Residential trigger */}
                   <div
                     className="relative"
-                    onMouseEnter={() => setSubOpen("res")}
-                    onMouseLeave={() => setSubOpen(prev => prev === "res" ? null : prev)}
+                    onMouseEnter={() => onSubEnter("res")}
+                    onMouseLeave={() => onSubLeave("res")}
                   >
                     <button
                       type="button"
                       className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 inline-flex items-center justify-between"
-                      onClick={() => setSubOpen(s => s === "res" ? null : "res")}
+                      onClick={() => setSubOpen((s) => (s === "res" ? null : "res"))}
                       aria-haspopup="menu"
                       aria-expanded={subOpen === "res"}
                     >
@@ -90,16 +141,16 @@ export default function Navbar() {
                     )}
                   </div>
 
-                  {/* Commercial (submenu trigger) */}
+                  {/* Commercial trigger */}
                   <div
                     className="relative"
-                    onMouseEnter={() => setSubOpen("com")}
-                    onMouseLeave={() => setSubOpen(prev => prev === "com" ? null : prev)}
+                    onMouseEnter={() => onSubEnter("com")}
+                    onMouseLeave={() => onSubLeave("com")}
                   >
                     <button
                       type="button"
                       className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 inline-flex items-center justify-between"
-                      onClick={() => setSubOpen(s => s === "com" ? null : "com")}
+                      onClick={() => setSubOpen((s) => (s === "com" ? null : "com"))}
                       aria-haspopup="menu"
                       aria-expanded={subOpen === "com"}
                     >
@@ -131,7 +182,7 @@ export default function Navbar() {
                     )}
                   </div>
 
-                  {/* New Launch (direct) */}
+                  {/* New Launch direct */}
                   <Link
                     to="/properties?for=under-construction&segment=residential"
                     className="block px-4 py-2 rounded-lg hover:bg-gray-50"
@@ -167,7 +218,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE DRAWER (simple list; submenus can be added later similarly) */}
+      {/* MOBILE DRAWER (simple list) */}
       {mobileOpen && (
         <div className="md:hidden bg-white/95 backdrop-blur border-t border-gray-200 z-[250]">
           <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2 text-gray-900">
