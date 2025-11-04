@@ -12,6 +12,7 @@ import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import AdminUpload from './pages/AdminUpload';
+import TopLuxurySouthMumbai2025 from "./pages/blog/TopLuxurySouthMumbai2025";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/admin" element={<AdminUpload />} />
+          <Route path="/blog/top-luxury-south-mumbai-2025" element={<TopLuxurySouthMumbai2025 />} />
         </Routes>
       </main>
       <Footer />
