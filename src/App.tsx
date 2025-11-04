@@ -12,21 +12,21 @@ import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import AdminUpload from './pages/AdminUpload';
-import TopLuxurySouthMumbai2025 from "./pages/blog/TopLuxurySouthMumbai2025";
 
 export default function App() {
   return (
     <HashRouter>
       <ScrollToTop />
       <Navbar />
-      <main id="scroll-root" className="min-h-screen pt-16">
+
+      {/* ✅ Removed top padding */}
+      <main id="scroll-root" className="min-h-screen pt-0">
         <Routes>
           <Route path="/" element={<HomePage />} />
 
-          {/* ✅ Listing & ✅ Detail handled separately */}
           <Route path="/properties">
-            <Route index element={<PropertiesPage />} />                      
-            <Route path=":slug" element={<PropertyDetailsPage />} />          
+            <Route index element={<PropertiesPage />} />
+            <Route path=":slug" element={<PropertyDetailsPage />} />
           </Route>
 
           <Route path="/about" element={<AboutPage />} />
@@ -35,9 +35,9 @@ export default function App() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/admin" element={<AdminUpload />} />
-          <Route path="/blog/top-luxury-south-mumbai-2025" element={<TopLuxurySouthMumbai2025 />} />
         </Routes>
       </main>
+
       <Footer />
     </HashRouter>
   );
