@@ -10,18 +10,22 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12">
-            <img
-              src="/logo.png" /* or '/sahai_estates_ultra.png' */
-              alt="Sahai Estates"
-              className="h-12 md:h-14 lg:h-16 w-auto object-contain"
-              loading="eager"
-              decoding="async"
-            />
-            <span className="hidden sm:block text-gray-900 font-semibold text-lg md:text-xl">
-              Sahai Estates
-            </span>
-          </Link>
+          <Link to="/" className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12" aria-label="Sahai Estates - Home">
+          <img
+            src="/logo.png"          
+            alt="Sahai Estates"
+            className="h-12 md:h-14 lg:h-16 w-auto object-contain"
+            loading="eager"
+            decoding="async"
+          />
+          {/* ❌ duplicate text remove */}
+          {/* <span className="hidden sm:block text-gray-900 font-semibold text-lg md:text-xl">
+            Sahai Estates
+          </span> */}
+          {/* ✅ optional: keep for accessibility only (won't show visually) */}
+          <span className="sr-only">Sahai Estates</span>
+        </Link>
+
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center gap-6 text-gray-900">
