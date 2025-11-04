@@ -5,7 +5,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl bg-white/30 border-b border-white/10 shadow-sm">
+    <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl bg-white/20 border-b border-white/20 shadow-sm">
       <div className="mx-auto max-w-7xl px-3 sm:px-4">
         <div className="flex items-center justify-between h-16">
 
@@ -15,13 +15,13 @@ export default function Navbar() {
             className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12"
           >
             {/* 👉 change src to your exact logo path */}
-            <img
-              src="/logo.png"
-              alt="Sahai Estates"
-              className="h-10 md:h-12 lg:h-14 w-auto object-contain"
-              loading="eager"
-              decoding="async"
-            />
+            <<img
+            src="/logo.png"
+            alt="Sahai Estates"
+            className="h-12 md:h-14 lg:h-16 w-auto object-contain"
+            loading="eager"
+          />
+
             <span className="hidden sm:block text-gray-900 font-semibold text-lg md:text-xl">
               Sahai Estates
             </span>
