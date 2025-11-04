@@ -138,13 +138,15 @@ export default function RotatingHero({
       <div className="w-full h-full flex" style={translateStyle}>
         {loopSlides.map((src, i) => (
           <img
-            key={src + i}
-            src={src}
-            alt=""
-            className="w-full h-full object-cover flex-shrink-0 select-none pointer-events-none"
-            loading={i === 0 ? "eager" : "lazy"}
-            decoding="async"
-          />
+          src={images[index]}
+          alt=""
+          className="w-full h-full object-cover"
+          style={{ 
+            objectFit: "cover", 
+            width: "100%", 
+            height: "100%" 
+          }}
+        />
         ))}
       </div>
 
