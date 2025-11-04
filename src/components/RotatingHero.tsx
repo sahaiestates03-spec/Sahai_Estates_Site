@@ -51,7 +51,7 @@ export default function RotatingHero({
   }
 
   return (
-    <div className={`relative ${heightClass} overflow-hidden`}>
+      <div className={`relative w-full ${heightClass} overflow-hidden -mt-16 md:-mt-20`}>
       {/* Crossfade stack (no sliding track → no grey gaps) */}
       <div className="absolute inset-0">
         {slides.map((src, i) => {
