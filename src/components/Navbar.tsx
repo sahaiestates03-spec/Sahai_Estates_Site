@@ -9,26 +9,21 @@ export default function Navbar() {
       <div className="mx-auto max-w-7xl px-3 sm:px-4">
         <div className="flex items-center justify-between h-16">
 
-          {/* LOGO — bigger + shifted right */}
-          <Link
-            to="/"
-            className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12"
-          >
-            {/* 👉 change src to your exact logo path */}
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-3 ml-4 md:ml-8 lg:ml-12">
             <img
-            src="/logo.png"
-            alt="Sahai Estates"
-            className="h-12 md:h-16 lg:h-18 w-auto object-contain"
-            loading="eager"
-          />
-
-
+              src="/logo.png" /* or '/sahai_estates_ultra.png' */
+              alt="Sahai Estates"
+              className="h-12 md:h-14 lg:h-16 w-auto object-contain"
+              loading="eager"
+              decoding="async"
+            />
             <span className="hidden sm:block text-gray-900 font-semibold text-lg md:text-xl">
               Sahai Estates
             </span>
           </Link>
 
-          {/* MENU (desktop) */}
+          {/* Desktop menu */}
           <div className="hidden md:flex items-center gap-6 text-gray-900">
             <Link to="/" className="hover:text-brand-600 font-medium">Home</Link>
             <div className="relative group">
@@ -43,19 +38,15 @@ export default function Navbar() {
             <Link to="/services" className="hover:text-brand-600 font-medium">Services</Link>
             <Link to="/blog" className="hover:text-brand-600 font-medium">Blog</Link>
             <Link to="/contact" className="hover:text-brand-600 font-medium">Contact</Link>
-
-            <a
-              href="tel:+919920214015"
-              className="ml-2 inline-flex items-center px-4 py-2 rounded-lg bg-brand-600 text-white font-semibold hover:bg-brand-700 transition"
-            >
+            <a href="tel:+919920214015" className="ml-2 inline-flex items-center px-4 py-2 rounded-lg bg-brand-600 text-white font-semibold hover:bg-brand-700 transition">
               📞 Call Now
             </a>
           </div>
 
-          {/* MOBILE toggle */}
+          {/* Mobile toggle */}
           <button
             className="md:hidden mr-2 rounded-lg bg-white/70 px-3 py-2"
-            onClick={() => setOpen(s => !s)}
+            onClick={() => setOpen((s) => !s)}
             aria-label="Toggle Menu"
           >
             ☰
@@ -63,7 +54,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE drawer */}
+      {/* Mobile drawer */}
       {open && (
         <div className="md:hidden bg-white/95 backdrop-blur border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2 text-gray-900">
