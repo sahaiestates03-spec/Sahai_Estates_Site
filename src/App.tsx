@@ -11,8 +11,8 @@ import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import AdminUpload from './pages/AdminUpload';
-import NewLaunch from "@/pages/NewLaunch";
-import PropertyDetailsPage from "@/pages/PropertyDetailsPage";
+import NewLaunch from "./pages/NewLaunch";
+import PropertyDetailsPage from "./pages/PropertyDetailsPage";
 
 export default function App() {
   return (
