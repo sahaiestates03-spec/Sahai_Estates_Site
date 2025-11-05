@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
+import BrochureLeadBox from "@/components/BrochureLeadBox";
 import {
   MapPin, Bed, Bath, Square, Phone, MessageCircle,
   ChevronLeft, ChevronRight
@@ -289,6 +290,18 @@ export default function PropertyDetailsPage() {
               {property.propertyType ? <div className="flex items-center gap-2"><span className="font-medium">{property.propertyType}</span></div> : null}
             </div>
           </div>
+
+          <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
+  {/* Aapka existing price/CTA block agar rakhna ho to rakho */}
+  <div className="mt-6">
+    <BrochureLeadBox project={{
+      project_id: property.id,
+      project_name: property.title,
+      slug: property.slug || property.title,
+      brochure_url: property.brochure_url || "" // add this field in your sheet
+    }}/>
+  </div>
+</aside>
 
           <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
             <div className="text-2xl font-semibold mb-2">{priceLabel(property.price, property.listingFor)}</div>
