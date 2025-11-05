@@ -32,7 +32,7 @@ export default function NewLaunch() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-24">
      <h1 className="text-3xl font-semibold tracking-tight mb-4">
-  New Launch • Under Construction
+  New Launch Projects
 </h1>
 
 
