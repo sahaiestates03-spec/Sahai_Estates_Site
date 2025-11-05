@@ -211,9 +211,6 @@ function mapRow(r: RawRow): PropertyRow | null {
 // --- fetch with cache ---------------------------------------------------------
 let cache: { at: number; data: PropertyRow[] } | null = null;
 
-// --- fetch with cache ---------------------------------------------------------
-let cache: { at: number; data: PropertyRow[] } | null = null;
-
 export async function fetchSheet(): Promise<PropertyRow[]> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_MIN * 60_000) return cache.data;
