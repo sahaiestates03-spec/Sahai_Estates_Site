@@ -11,13 +11,13 @@ export type PropertyRow = {
   status?: string;
   location?: string;
   areaLocality?: string;
-  price?: number;       // rupees
+  price?: number;
   bedrooms?: number;
   bathrooms?: number;
   areaSqft?: number;
   propertyType?: string;
   amenities?: string[];
-  images?: string[];    // first is cover
+  images?: string[];
   isFeatured?: boolean;
 };
 
@@ -25,10 +25,9 @@ export type PropertyRow = {
 const SHEET_RAW = import.meta.env.VITE_SHEET_ID?.trim() || "";
 const CACHE_MIN = Number(import.meta.env.VITE_SHEET_CACHE_MIN || 10);
 
-// Accept either a Sheet ID or a full publish/gviz URL
 function resolveCsvUrl(): string | null {
   if (!SHEET_RAW) return null;
-  if (/^https?:\/\//i.test(SHEET_RAW)) return SHEET_RAW; // full URL pasted
+  if (/^https?:\/\//i.test(SHEET_RAW)) return SHEET_RAW;
   return `https://docs.google.com/spreadsheets/d/${SHEET_RAW}/gviz/tq?tqx=out:csv&gid=0`;
 }
 
@@ -55,7 +54,7 @@ function cleanNum(v?: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
-// --- CSV (robust enough for Google Sheets) -----------------------------------
+// --- CSV parsing for Google Sheets ---------------------------------------------------
 function parseCSV(text: string): RawRow[] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -114,35 +113,29 @@ function splitList(v?: string) {
   return v.split(/[|,]/).map(x => x.trim()).filter(Boolean);
 }
 
-// images: accept list, single url, or folder shorthand -> expand 1..8
 function normalizeImages(v?: string) {
   if (!v) return [];
   const raw = v.trim();
 
-  // List or explicit files
   if (raw.includes(",") || /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(raw)) {
     return raw.split(/[|,]/).map(s => s.trim()).filter(Boolean);
   }
 
-  // "FOLDER::residential/Beaumonde-903A"
   if (raw.startsWith("FOLDER::")) {
     const folder = raw.replace(/^FOLDER::/i, "").replace(/^\/+/, "");
     return Array.from({ length: 8 }, (_, i) => `/prop-pics/${folder}/${i + 1}.jpg`);
   }
 
-  // "residential/Beaumonde-903A/*"
   if (raw.endsWith("/*")) {
     const folder = raw.slice(0, -2).replace(/^\/+/, "");
     return Array.from({ length: 8 }, (_, i) => `/prop-pics/${folder}/${i + 1}.jpg`);
   }
 
-  // Looks like a folder (has slash, no extension)
   if (/.+\/.+/.test(raw) && !/\.[a-z0-9]+$/i.test(raw)) {
     const folder = raw.replace(/^\/+/, "");
     return Array.from({ length: 8 }, (_, i) => `/prop-pics/${folder}/${i + 1}.jpg`);
   }
 
-  // Single path or URL
   return [raw];
 }
 
@@ -152,19 +145,15 @@ function bool(v?: string) {
   return t === "true" || t === "1" || t === "yes";
 }
 
-// simple slug fallback when id is missing
 function slugify(s: string) {
   return s.toLowerCase().trim().replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 function mapRow(r: RawRow): PropertyRow | null {
   const get = (k: string) =>
-    r[k] ??
-    r[k.toLowerCase()] ??
-    r[k.replace(/\s+/g, "").toLowerCase()] ??
-    undefined;
+    r[k] ?? r[k.toLowerCase()] ?? r[k.replace(/\s+/g, "").toLowerCase()] ?? undefined;
 
-  const title = ((get("title") as string) || (get("name") as string) || "Property").trim();
+  const title = ((get("title") as string) || "Property").trim();
   const idCell = (get("id") as string) || "";
   const id = idCell.trim() || slugify(title);
 
@@ -179,7 +168,6 @@ function mapRow(r: RawRow): PropertyRow | null {
   const location     = (get("location") as string) || undefined;
   const areaLocality = (get("areaLocality") as string) || undefined;
   const propertyType = (get("propertyType") as string) || undefined;
-
   const amenities = splitList(get("amenities") as string);
   const images    = normalizeImages(get("images") as string);
   const isFeatured = bool(get("isFeatured") as string);
@@ -205,10 +193,11 @@ function mapRow(r: RawRow): PropertyRow | null {
     amenities,
     images,
     isFeatured,
+    status: (get("status") as string) || "", // 👈 ensure status exists
   };
 }
 
-// --- fetch with cache ---------------------------------------------------------
+// --- fetch + filter -----------------------------------------------------------
 let cache: { at: number; data: PropertyRow[] } | null = null;
 
 export async function fetchSheet(): Promise<PropertyRow[]> {
@@ -229,8 +218,11 @@ export async function fetchSheet(): Promise<PropertyRow[]> {
     const rows = parseCSV(text)
       .map(mapRow)
       .filter((x): x is PropertyRow => !!x)
-      // ✅ Only show properties where status = available
-      .filter(p => (p.status || "").toLowerCase() === "available");
+      // ✅ Hide only rented / sold / inactive
+      .filter(p => {
+        const s = (p.status || "").toLowerCase();
+        return !["rented", "sold", "inactive"].includes(s);
+      });
 
     cache = { at: Date.now(), data: rows };
     return rows;
@@ -239,4 +231,3 @@ export async function fetchSheet(): Promise<PropertyRow[]> {
     return [];
   }
 }
-
