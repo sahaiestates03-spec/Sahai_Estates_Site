@@ -1,4 +1,7 @@
 // src/pages/NewLaunch.tsx
+const sluggify = (s?: string) =>
+  (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchNewLaunch, type Project } from "../data/newLaunch";
