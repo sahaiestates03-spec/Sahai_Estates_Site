@@ -38,7 +38,7 @@ export default function NewLaunch() {
 
       <input
         placeholder="Search by project/developer/locality"
-        className="w-full md:w-1/2 border rounded-xl px-4 py-2 mb-6"
+        className="w-full md:w-1/2 border border-gray-300 rounded-xl px-4 py-2 mb-6 focus:ring-2 focus:ring-black/20 outline-none"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
