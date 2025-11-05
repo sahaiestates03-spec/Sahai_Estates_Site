@@ -1,16 +1,17 @@
 // src/pages/NewLaunch.tsx
-const sluggify = (s?: string) =>
-  (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchNewLaunch, type Project } from "../data/newLaunch";
+
+const sluggify = (s?: string) =>
+  (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 function rupee(n?: string) {
   if (!n) return "";
   const x = Number(n);
   if (!x) return "";
-  if (x >= 1e7) return `₹${(x/1e7).toFixed(2)} Cr`;
-  if (x >= 1e5) return `₹${(x/1e5).toFixed(2)} L`;
+  if (x >= 1e7) return `₹${(x / 1e7).toFixed(2)} Cr`;
+  if (x >= 1e5) return `₹${(x / 1e5).toFixed(2)} L`;
   return `₹${x.toLocaleString("en-IN")}`;
 }
 
@@ -18,11 +19,14 @@ export default function NewLaunch() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [q, setQ] = useState("");
 
-  useEffect(() => { fetchNewLaunch().then(setProjects); }, []);
+  useEffect(() => {
+    fetchNewLaunch().then(setProjects);
+  }, []);
 
-  const filtered = projects.filter(p =>
+  const filtered = projects.filter((p) =>
     (p.project_name + " " + p.locality + " " + p.city + " " + p.developer_name)
-      .toLowerCase().includes(q.toLowerCase())
+      .toLowerCase()
+      .includes(q.toLowerCase())
   );
 
   return (
@@ -32,72 +36,84 @@ export default function NewLaunch() {
       <input
         placeholder="Search by project/developer/locality"
         className="w-full md:w-1/2 border rounded-xl px-4 py-2 mb-6"
-        value={q} onChange={e=>setQ(e.target.value)}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
       />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map(p => (
-          <div key={p.slug} className="rounded-2xl overflow-hidden shadow border bg-white/70 backdrop-blur">
-            <img src={p.hero_image_url} alt={p.project_name} className="h-44 w-full object-cover"/>
-            <div className="p-4">
-              <div className="text-lg font-semibold">{p.project_name}</div>
-              <div className="text-sm text-gray-600">{p.locality}, {p.city}</div>
-              <div className="text-sm mt-1">{p.unit_types}</div>
-              <div className="text-sm mt-1">
-                {(p.price_min_inr && p.price_max_inr)
-                  ? `${rupee(p.price_min_inr)} – ${rupee(p.price_max_inr)}`
-                  : "Price on request"}
-              </div>
-              <div className="flex gap-2 mt-4">
-                {/* Aapke existing detail route ke hisaab se slug open hoga */}
-                <img
-  src={p.hero_image_url}
-  alt={p.project_name}
-  className="h-44 w-full object-cover"
-  onError={(e)=>{ (e.currentTarget as HTMLImageElement).src = "/fallbacks/project-hero.jpg"; }}
-/>
+        {filtered.map((p) => {
+          const slug = p.slug || sluggify(p.project_name);
+          return (
+            <div
+              key={slug}
+              className="rounded-2xl overflow-hidden shadow border bg-white/70 backdrop-blur"
+            >
+              <img
+                src={p.hero_image_url}
+                alt={p.project_name}
+                className="h-44 w-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/fallbacks/project-hero.jpg";
+                }}
+              />
 
-<div className="flex gap-2 mt-4">
-  <Link
-    to={`/properties/${p.slug || sluggify(p.project_name)}`}
-    state={{
-      property: {
-        id: p.project_id,
-        slug: p.slug || sluggify(p.project_name),
-        title: p.project_name,
-        location: `${p.locality || ""}${p.locality?", ":""}${p.city || ""}`,
-        price: 0, // “Price on request”
-        listingFor: "under-construction",
-        description: `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
-        images: p.gallery_image_urls || `FOLDER::residential/${p.slug || sluggify(p.project_name)}/*`,
-        brochure_url: p.brochure_url || ""
-      }
-    }}
-    className="px-3 py-2 rounded-xl border"
-  >
-    View Details
-  </Link>
+              <div className="p-4">
+                <div className="text-lg font-semibold">{p.project_name}</div>
+                <div className="text-sm text-gray-600">
+                  {p.locality}, {p.city}
+                </div>
+                <div className="text-sm mt-1">{p.unit_types}</div>
+                <div className="text-sm mt-1">
+                  {p.price_min_inr && p.price_max_inr
+                    ? `${rupee(p.price_min_inr)} – ${rupee(p.price_max_inr)}`
+                    : "Price on request"}
+                </div>
 
-  <Link
-    to={`/properties/${p.slug || sluggify(p.project_name)}#brochure`}
-    state={{ property: {
-      id: p.project_id,
-      slug: p.slug || sluggify(p.project_name),
-      title: p.project_name,
-      brochure_url: p.brochure_url || "",
-      listingFor: "under-construction"
-    }}}
-    className="px-3 py-2 rounded-xl bg-black text-white"
-  >
-    Get Brochure
-  </Link>
-</div>
+                <div className="flex gap-2 mt-4">
+                  <Link
+                    to={`/properties/${slug}`}
+                    state={{
+                      property: {
+                        id: p.project_id,
+                        slug,
+                        title: p.project_name,
+                        location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`,
+                        price: 0, // Price on request
+                        listingFor: "under-construction",
+                        description: `${p.developer_name || ""} new launch in ${
+                          p.locality || p.city || "Mumbai"
+                        }.`,
+                        images:
+                          p.gallery_image_urls ||
+                          `FOLDER::residential/${slug}/*`,
+                        brochure_url: p.brochure_url || "",
+                      },
+                    }}
+                    className="px-3 py-2 rounded-xl border"
+                  >
+                    View Details
+                  </Link>
 
-                <Link to={`/properties/${p.slug}#brochure`} className="px-3 py-2 rounded-xl bg-black text-white">Get Brochure</Link>
+                  <Link
+                    to={`/properties/${slug}#brochure`}
+                    state={{
+                      property: {
+                        id: p.project_id,
+                        slug,
+                        title: p.project_name,
+                        brochure_url: p.brochure_url || "",
+                        listingFor: "under-construction",
+                      },
+                    }}
+                    className="px-3 py-2 rounded-xl bg-black text-white"
+                  >
+                    Get Brochure
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
