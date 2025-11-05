@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
-import BrochureLeadBox from "@/components/BrochureLeadBox";
+import BrochureLeadBox from "./components/BrochureLeadBox";
 import {
   MapPin, Bed, Bath, Square, Phone, MessageCircle,
   ChevronLeft, ChevronRight
