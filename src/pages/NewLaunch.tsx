@@ -50,7 +50,49 @@ export default function NewLaunch() {
               </div>
               <div className="flex gap-2 mt-4">
                 {/* Aapke existing detail route ke hisaab se slug open hoga */}
-                <Link to={`/properties/${p.slug}`} className="px-3 py-2 rounded-xl border">View Details</Link>
+                <img
+  src={p.hero_image_url}
+  alt={p.project_name}
+  className="h-44 w-full object-cover"
+  onError={(e)=>{ (e.currentTarget as HTMLImageElement).src = "/fallbacks/project-hero.jpg"; }}
+/>
+
+<div className="flex gap-2 mt-4">
+  <Link
+    to={`/properties/${p.slug || sluggify(p.project_name)}`}
+    state={{
+      property: {
+        id: p.project_id,
+        slug: p.slug || sluggify(p.project_name),
+        title: p.project_name,
+        location: `${p.locality || ""}${p.locality?", ":""}${p.city || ""}`,
+        price: 0, // “Price on request”
+        listingFor: "under-construction",
+        description: `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
+        images: p.gallery_image_urls || `FOLDER::residential/${p.slug || sluggify(p.project_name)}/*`,
+        brochure_url: p.brochure_url || ""
+      }
+    }}
+    className="px-3 py-2 rounded-xl border"
+  >
+    View Details
+  </Link>
+
+  <Link
+    to={`/properties/${p.slug || sluggify(p.project_name)}#brochure`}
+    state={{ property: {
+      id: p.project_id,
+      slug: p.slug || sluggify(p.project_name),
+      title: p.project_name,
+      brochure_url: p.brochure_url || "",
+      listingFor: "under-construction"
+    }}}
+    className="px-3 py-2 rounded-xl bg-black text-white"
+  >
+    Get Brochure
+  </Link>
+</div>
+
                 <Link to={`/properties/${p.slug}#brochure`} className="px-3 py-2 rounded-xl bg-black text-white">Get Brochure</Link>
               </div>
             </div>
