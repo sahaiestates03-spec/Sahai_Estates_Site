@@ -1,8 +1,7 @@
 // src/pages/NewLaunch.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchNewLaunch, type Project } from "./data/newLaunch";
-
+import { fetchNewLaunch, type Project } from "../data/newLaunch";
 function rupee(n?: string) {
   if (!n) return "";
   const x = Number(n);
