@@ -31,7 +31,10 @@ export default function NewLaunch() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-24">
-      <h1 className="text-3xl font-semibold mb-4">New Launch • Under Construction</h1>
+     <h1 className="text-3xl font-semibold tracking-tight mb-4">
+  New Launch • Under Construction
+</h1>
+
 
       <input
         placeholder="Search by project/developer/locality"
@@ -45,9 +48,10 @@ export default function NewLaunch() {
           const slug = p.slug || sluggify(p.project_name);
           return (
             <div
-              key={slug}
-              className="rounded-2xl overflow-hidden shadow border bg-white/70 backdrop-blur"
-            >
+            key={slug}
+            className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border bg-white"
+          >
+
               <img
                 src={p.hero_image_url}
                 alt={p.project_name}
