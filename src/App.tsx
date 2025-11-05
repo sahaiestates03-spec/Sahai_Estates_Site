@@ -2,7 +2,6 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
-
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
@@ -12,6 +11,8 @@ import ContactPage from './pages/ContactPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import AdminUpload from './pages/AdminUpload';
+import NewLaunch from "@/pages/NewLaunch";
+import PropertyDetailsPage from "@/pages/PropertyDetailsPage";
 
 export default function App() {
   return (
@@ -35,6 +36,8 @@ export default function App() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/admin" element={<AdminUpload />} />
+          <Route path="/new-launch" element={<NewLaunch />} />
+          <Route path="/properties/:slug" element={<PropertyDetailsPage />} />
         </Routes>
       </main>
 
