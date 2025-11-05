@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
 import BrochureLeadBox from "../components/BrochureLeadBox";
+import { fetchNewLaunch } from "../data/newLaunch";
+
 import {
   MapPin, Bed, Bath, Square, Phone, MessageCircle,
   ChevronLeft, ChevronRight
@@ -124,18 +126,38 @@ export default function PropertyDetailsPage() {
   const [loading, setLoading] = useState<boolean>(!propFromState);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
+  let alive = true;
+  (async () => {
+    try {
+      // 1) pehle main sheet
+      const data = await fetchSheet();
+      if (!alive) return;
+
+      // 2) new launch CSV ko PropertyRow shape me map karke merge
       try {
-        const data = await fetchSheet();
-        if (!alive) return;
+        const nl = await fetchNewLaunch();
+        const mapped = nl.map((p:any) => ({
+          id: p.project_id,
+          slug: p.slug || sluggify(p.project_name),
+          title: p.project_name,
+          location: `${p.locality || ""}${p.locality?", ":""}${p.city || ""}`,
+          price: 0,
+          listingFor: "under-construction",
+          description: `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
+          images: p.gallery_image_urls || `FOLDER::residential/${p.slug || sluggify(p.project_name)}/*`,
+          brochure_url: p.brochure_url || ""
+        })) as PropertyRow[];
+        setRows([...data, ...mapped]);
+      } catch {
         setRows(data);
-      } finally {
-        if (alive) setLoading(false);
       }
-    })();
-    return () => { alive = false; };
-  }, []);
+    } finally {
+      if (alive) setLoading(false);
+    }
+  })();
+  return () => { alive = false; };
+}, []);
+
 
   const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
