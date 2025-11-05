@@ -211,6 +211,9 @@ function mapRow(r: RawRow): PropertyRow | null {
 // --- fetch with cache ---------------------------------------------------------
 let cache: { at: number; data: PropertyRow[] } | null = null;
 
+// --- fetch with cache ---------------------------------------------------------
+let cache: { at: number; data: PropertyRow[] } | null = null;
+
 export async function fetchSheet(): Promise<PropertyRow[]> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_MIN * 60_000) return cache.data;
@@ -224,8 +227,14 @@ export async function fetchSheet(): Promise<PropertyRow[]> {
   try {
     const resp = await fetch(url, { cache: "no-store" });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
     const text = await resp.text();
-    const rows = parseCSV(text).map(mapRow).filter((x): x is PropertyRow => !!x);
+    const rows = parseCSV(text)
+      .map(mapRow)
+      .filter((x): x is PropertyRow => !!x)
+      // ✅ Only show properties where status = available
+      .filter(p => (p.status || "").toLowerCase() === "available");
+
     cache = { at: Date.now(), data: rows };
     return rows;
   } catch (err) {
@@ -233,3 +242,4 @@ export async function fetchSheet(): Promise<PropertyRow[]> {
     return [];
   }
 }
+
