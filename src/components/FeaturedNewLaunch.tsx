@@ -1,4 +1,22 @@
 // src/components/FeaturedNewLaunch.tsx
+
+// helper to build a consistent "property" state object passed to Link
+const makePropertyState = (p: any) => {
+  const slug = (p.slug || sluggify(p.project_name || p.title || p.project_id || "")).toString().trim().toLowerCase();
+  return {
+    id: p.project_id || slug,
+    slug,
+    title: p.project_name || p.title || slug,
+    location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`.replace(/^,|,$/g, ""),
+    price: Number(p.price_min_inr || p.price || 0) || 0,
+    listingFor: "under-construction",
+    description: p.description || `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
+    images: p.gallery_image_urls || p.images || `FOLDER::new-launch/${slug}/*`,
+    brochure_url: p.brochure_url || ""
+  };
+};
+
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchNewLaunch, type Project } from "../data/newLaunch";
