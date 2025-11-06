@@ -186,14 +186,7 @@ export default function Navbar() {
                     )}
                   </div>
 
-                  {/* New Launch direct */}
-                  <Link
-                    to="/properties?for=under-construction&segment=residential"
-                    className="block px-4 py-2 rounded-lg hover:bg-gray-50"
-                    role="menuitem"
-                  >
-                    New Launch
-                  </Link>
+                  
                 </div>
               )}
             </div>
