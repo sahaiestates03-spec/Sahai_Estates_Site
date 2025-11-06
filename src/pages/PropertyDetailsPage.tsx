@@ -65,14 +65,14 @@ function buildImageCandidates(p: PropertyRow): string[] {
     // FOLDER::segment/slug/* or segment/slug/* or segment/slug (no extension)
     if (text.startsWith("FOLDER::")) {
       const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"").replace(/^\/+/, "");
-      // try 1..20 with multiple extensions
+      // try 1..20 with multiple extensions (pointing under new-launch for FOLDER)
       for (let i = 1; i <= 20; i++) {
-        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
+        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/new-launch/${folder}/${i}.${ext}`));
       }
     } else if (/(.+\/.+)(\*|$)/.test(text) && !/\.[a-z0-9]+$/i.test(text)) {
       const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
       for (let i = 1; i <= 20; i++) {
-        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
+        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/new-launch/${folder}/${i}.${ext}`));
       }
     } else if (text.includes(",")) {
       text.split(",").map(s => s.trim()).forEach((x) => push(x));
@@ -126,38 +126,47 @@ export default function PropertyDetailsPage() {
   const [loading, setLoading] = useState<boolean>(!propFromState);
 
   useEffect(() => {
-  let alive = true;
-  (async () => {
-    try {
-      // 1) pehle main sheet
-      const data = await fetchSheet();
-      if (!alive) return;
-
-      // 2) new launch CSV ko PropertyRow shape me map karke merge
+    let alive = true;
+    (async () => {
       try {
-        const nl = await fetchNewLaunch();
-        const mapped = nl.map((p:any) => ({
-          id: p.project_id,
-          slug: p.slug || sluggify(p.project_name),
-          title: p.project_name,
-          location: `${p.locality || ""}${p.locality?", ":""}${p.city || ""}`,
-          price: 0,
-          listingFor: "under-construction",
-          description: `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
-          images: p.gallery_image_urls || `FOLDER::residential/${p.slug || sluggify(p.project_name)}/*`,
-          brochure_url: p.brochure_url || ""
-        })) as PropertyRow[];
-        setRows([...data, ...mapped]);
-      } catch {
-        setRows(data);
-      }
-    } finally {
-      if (alive) setLoading(false);
-    }
-  })();
-  return () => { alive = false; };
-}, []);
+        // 1) main sheet
+        const data = await fetchSheet();
+        if (!alive) return;
 
+        // 2) new launch CSV ko PropertyRow shape me map karke merge
+        try {
+          const nl = await fetchNewLaunch();
+          const mapped = nl.map((p: any) => {
+            const slug = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
+            return {
+              id: p.project_id || slug,
+              slug: slug,
+              title: p.project_name || p.title || slug,
+              location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`.replace(/^, |, $/, ""),
+              price: p.price ? Number(p.price) : 0,
+              // set both fields so downstream filters/readers that use either will work
+              listingFor: "under-construction" as const,
+              for: "under-construction",
+              // segment used by filters (residential/commercial)
+              segment: (p.segment || "residential").toString().toLowerCase(),
+              description: p.description || `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
+              // ensure image folder resolves to /prop-pics/new-launch/<slug>/*
+              images: p.gallery_image_urls || `FOLDER::${slug}/*`,
+              brochure_url: p.brochure_url || ""
+            } as PropertyRow;
+          }) as PropertyRow[];
+          // merge sheet data + new launches (sheet first so sheet items remain priority)
+          if (alive) setRows([...data, ...mapped]);
+        } catch (err) {
+          // fallback: only sheet data
+          if (alive) setRows(data);
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
@@ -314,16 +323,15 @@ export default function PropertyDetailsPage() {
           </div>
 
           <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
-  {/* Aapka existing price/CTA block agar rakhna ho to rakho */}
-  <div className="mt-6">
-    <BrochureLeadBox project={{
-      project_id: property.id,
-      project_name: property.title,
-      slug: property.slug || property.title,
-      brochure_url: property.brochure_url || "" // add this field in your sheet
-    }}/>
-  </div>
-</aside>
+            <div className="mt-6">
+              <BrochureLeadBox project={{
+                project_id: property.id,
+                project_name: property.title,
+                slug: property.slug || property.title,
+                brochure_url: property.brochure_url || ""
+              }}/>
+            </div>
+          </aside>
 
           <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
             <div className="text-2xl font-semibold mb-2">{priceLabel(property.price, property.listingFor)}</div>
