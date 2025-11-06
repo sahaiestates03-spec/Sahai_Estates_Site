@@ -44,12 +44,26 @@ export type PropertyRow = {
 
 // --- env + URL resolver ------------------------------------------------------
 const SHEET_RAW = import.meta.env.VITE_SHEET_ID?.trim() || "";
+const SHEET_GID = (import.meta.env.VITE_SHEET_GID?.toString() || "0").trim();
 const CACHE_MIN = Number(import.meta.env.VITE_SHEET_CACHE_MIN || 10);
 
 function resolveCsvUrl(): string | null {
   if (!SHEET_RAW) return null;
   if (/^https?:\/\//i.test(SHEET_RAW)) return SHEET_RAW;
-  return `https://docs.google.com/spreadsheets/d/${SHEET_RAW}/gviz/tq?tqx=out:csv&gid=0`;
+  return `https://docs.google.com/spreadsheets/d/${SHEET_RAW}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+}
+
+// --- additional CSV helpers you asked to add -------------------------------
+
+export const CSV_URL = (sheetId: string, gid: string) =>
+  `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+
+export async function fetchSheetCsv(sheetId: string, gid: string) {
+  const url = CSV_URL(sheetId, gid);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Sheet fetch failed ${res.status} ${res.statusText}`);
+  const csv = await res.text();
+  return csv;
 }
 
 // --- numeric helpers ---------------------------------------------------------
@@ -234,10 +248,25 @@ export async function fetchSheet(): Promise<PropertyRow[]> {
   }
 
   try {
-    const resp = await fetch(url, { cache: "no-store" });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    // If SHEET_RAW is a full URL we already have `url` — fetch directly.
+    // If SHEET_RAW looks like an ID (no protocol), prefer using fetchSheetCsv so we can pass gid explicitly.
+    let text: string;
+    if (/^https?:\/\//i.test(SHEET_RAW)) {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      text = await resp.text();
+    } else {
+      // SHEET_RAW is likely a sheet ID — use the CSV export endpoint with provided GID
+      try {
+        text = await fetchSheetCsv(SHEET_RAW, SHEET_GID);
+      } catch (err) {
+        // fallback to the resolveCsvUrl approach if export endpoint fails
+        const resp = await fetch(url, { cache: "no-store" });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        text = await resp.text();
+      }
+    }
 
-    const text = await resp.text();
     const rows = parseCSV(text)
       .map(mapRow)
       .filter((x): x is PropertyRow => !!x)
