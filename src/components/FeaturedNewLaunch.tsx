@@ -1,3 +1,4 @@
+// src/components/FeaturedNewLaunch.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchNewLaunch, type Project } from "../data/newLaunch";
@@ -21,17 +22,11 @@ export default function FeaturedNewLaunch() {
   useEffect(() => {
     (async () => {
       const rows = await fetchNewLaunch();
-      // Featured first → then by priority_rank (asc) → fallback by name
-      const sorted = [...rows].sort((a, b) => {
-        const fa = String(a.featured || "").toLowerCase() === "true" ? 0 : 1;
-        const fb = String(b.featured || "").toLowerCase() === "true" ? 0 : 1;
-        if (fa !== fb) return fa - fb;
-        const pa = Number((a as any).priority_rank || 9999);
-        const pb = Number((b as any).priority_rank || 9999);
-        if (pa !== pb) return pa - pb;
-        return (a.project_name || "").localeCompare(b.project_name || "");
-      });
-      setItems(sorted.slice(0, 10)); // top 10 featured
+      // Strict filter: only rows that have featured = TRUE (case-insensitive)
+      const featuredOnly = (rows || []).filter(
+        (r) => String((r as any).featured || "").toLowerCase() === "true"
+      );
+      setItems(featuredOnly);
     })();
   }, []);
 
