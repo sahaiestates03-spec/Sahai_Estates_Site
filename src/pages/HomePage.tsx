@@ -4,6 +4,7 @@ import FeaturedProperties from '../components/FeaturedProperties';
 import About from '../components/About';
 import Testimonials from '../components/Testimonials';
 import ContactForm from '../components/ContactForm';
+import FeaturedNewLaunch from "../components/FeaturedNewLaunch";
 
 export default function HomePage() {
   return (
@@ -22,6 +23,7 @@ export default function HomePage() {
 >
   <Hero />
 </RotatingHero>
+<FeaturedNewLaunch />
 
 
       {/* ✅ No manual heading here; component will render its own section */}
