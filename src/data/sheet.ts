@@ -1,13 +1,20 @@
 // src/data/sheet.ts
 
-// ✅ Converts sheet string values (TRUE/FALSE/Yes/No) to real booleans
-function toBool(v: any): boolean {
-  if (v === true || v === false) return v;
+// src/data/sheet.ts (or wherever you parse rows)
+export function toBool(v: any): boolean {
+  if (v === true || v === false) return v as boolean;
   if (typeof v === 'number') return v !== 0;
   if (v == null) return false;
   const s = String(v).trim().toLowerCase();
-  return ['true','1','yes','y'].includes(s);
+  return ['true','yes','y','1'].includes(s);
 }
+
+export const sluggify = (s?: string | null) =>
+  (s ?? '').toString().trim().toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+
 
 // -----------------
 
