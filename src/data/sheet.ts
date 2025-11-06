@@ -1,5 +1,16 @@
 // src/data/sheet.ts
+
+// ✅ Converts sheet string values (TRUE/FALSE/Yes/No) to real booleans
+function toBool(v: any): boolean {
+  if (v === true || v === false) return v;
+  if (typeof v === 'number') return v !== 0;
+  if (v == null) return false;
+  const s = String(v).trim().toLowerCase();
+  return ['true','1','yes','y'].includes(s);
+}
+
 // -----------------
+
 type RawRow = Record<string, string | undefined>;
 
 export type PropertyRow = {
@@ -19,6 +30,9 @@ export type PropertyRow = {
   amenities?: string[];
   images?: string[];
   isFeatured?: boolean;
+  new_launch?: boolean;
+  for_sale?: boolean;
+  for_rent?: boolean;
 };
 
 // --- env + URL resolver ------------------------------------------------------
@@ -139,12 +153,6 @@ function normalizeImages(v?: string) {
   return [raw];
 }
 
-function bool(v?: string) {
-  if (!v) return false;
-  const t = v.toLowerCase();
-  return t === "true" || t === "1" || t === "yes";
-}
-
 function slugify(s: string) {
   return s.toLowerCase().trim().replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, "");
 }
@@ -170,7 +178,12 @@ function mapRow(r: RawRow): PropertyRow | null {
   const propertyType = (get("propertyType") as string) || undefined;
   const amenities = splitList(get("amenities") as string);
   const images    = normalizeImages(get("images") as string);
-  const isFeatured = bool(get("isFeatured") as string);
+  const isFeatured = toBool(get("isFeatured") as string);
+
+  // NEW: parse boolean flags from sheet using toBool()
+  const new_launch = toBool(get("new_launch") as string || get("new launch") as string || get("newLaunch") as string);
+  const for_sale   = toBool(get("for_sale") as string || get("for sale") as string || get("forsale") as string);
+  const for_rent   = toBool(get("for_rent") as string || get("for rent") as string || get("forrent") as string);
 
   const price     = parsePrice(get("price") as string);
   const bedrooms  = cleanNum(get("bedrooms") as string);
@@ -193,7 +206,10 @@ function mapRow(r: RawRow): PropertyRow | null {
     amenities,
     images,
     isFeatured,
-    status: (get("status") as string) || "", // 👈 ensure status exists
+    new_launch,
+    for_sale,
+    for_rent,
+    status: (get("status") as string) || "",
   };
 }
 
