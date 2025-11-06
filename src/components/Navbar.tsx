@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Link } from "react-router-dom";
+// src/components/Navbar.tsx
+import React, { useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // dropdown states
@@ -59,6 +60,22 @@ export default function Navbar() {
     }, CLOSE_DELAY);
   };
 
+  // helper to detect active links (supports simple query checks)
+  const isActive = (path: string) => {
+    const [p, q] = path.split("?");
+    if (!p) return false;
+    if (location.pathname !== p) return false;
+    if (!q) return true;
+    const params = new URLSearchParams(location.search);
+    return q.split("&").every(pair => {
+      const [k, v] = pair.split("=");
+      return params.get(k) === v;
+    });
+  };
+
+  const baseLinkClass = "hover:text-brand-600 font-medium";
+  const activeClass = "text-brand-600 font-medium";
+
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-transparent backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-3 sm:px-4">
@@ -78,10 +95,15 @@ export default function Navbar() {
 
           {/* DESKTOP MENU */}
           <div className="hidden md:flex items-center gap-6 text-gray-900">
-            <Link to="/" className="hover:text-brand-600 font-medium">Home</Link>
-            <Link to="/#new-launch" className="hover:text-brand-600 font-medium">New Launch</Link>
+            <Link to="/" className={isActive("/") ? activeClass : baseLinkClass}>Home</Link>
 
-
+            {/* FIXED: New Launch should point to filtered properties page */}
+            <Link
+              to="/properties?for=under-construction&segment=residential"
+              className={isActive("/properties?for=under-construction&segment=residential") ? activeClass : baseLinkClass}
+            >
+              New Launch
+            </Link>
 
             {/* PROPERTIES (2-level, with delays) */}
             <div
@@ -185,16 +207,14 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-
-                  
                 </div>
               )}
             </div>
 
-            <Link to="/about" className="hover:text-brand-600 font-medium">About</Link>
-            <Link to="/services" className="hover:text-brand-600 font-medium">Services</Link>
-            <Link to="/blog" className="hover:text-brand-600 font-medium">Blog</Link>
-            <Link to="/contact" className="hover:text-brand-600 font-medium">Contact</Link>
+            <Link to="/about" className={isActive("/about") ? activeClass : baseLinkClass}>About</Link>
+            <Link to="/services" className={isActive("/services") ? activeClass : baseLinkClass}>Services</Link>
+            <Link to="/blog" className={isActive("/blog") ? activeClass : baseLinkClass}>Blog</Link>
+            <Link to="/contact" className={isActive("/contact") ? activeClass : baseLinkClass}>Contact</Link>
 
             <a
               href="tel:+919920214015"
