@@ -198,6 +198,25 @@ export default function PropertyDetailsPage() {
     return () => { alive = false; };
   }, [property]);
 
+  // Reset gallery index when images change so index never goes out of bounds
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!images || images.length === 0) {
+      setIndex(0);
+      return;
+    }
+    if (index >= images.length) setIndex(0);
+  }, [images, index]);
+
+  const [fit, setFit] = useState<"contain"|"cover">("contain");
+  const prev = () => setIndex(i => (i - 1 + images.length) % images.length);
+  const next = () => setIndex(i => (i + 1) % images.length);
+  const goto = (i: number) => setIndex(i);
+
+  const waNumber = "919920214015";
+  const waText = `Hi, I'm interested in ${property.title} (${priceLabel(property.price, property.listingFor)}). Please share details.`;
+  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
+
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
   }
@@ -217,16 +236,6 @@ export default function PropertyDetailsPage() {
       </div>
     );
   }
-
-  const [index, setIndex] = useState(0);
-  const [fit, setFit] = useState<"contain"|"cover">("contain");
-  const prev = () => setIndex(i => (i - 1 + images.length) % images.length);
-  const next = () => setIndex(i => (i + 1) % images.length);
-  const goto = (i: number) => setIndex(i);
-
-  const waNumber = "919920214015";
-  const waText = `Hi, I'm interested in ${property.title} (${priceLabel(property.price, property.listingFor)}). Please share details.`;
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
