@@ -79,9 +79,7 @@ export default function Navbar() {
           {/* DESKTOP MENU */}
           <div className="hidden md:flex items-center gap-6 text-gray-900">
             <Link to="/" className="hover:text-brand-600 font-medium">Home</Link>
-            <Link to="/#new-launch" className="text-sm font-medium hover:text-red-600 transition">
-  New Launch
-</Link>
+            <Link to="/#new-launch" className="hover:text-brand-600 font-medium">New Launch</Link>
 
 
 
