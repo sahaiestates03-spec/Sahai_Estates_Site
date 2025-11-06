@@ -1,3 +1,4 @@
+// src/pages/PropertyDetailsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
@@ -34,19 +35,24 @@ function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construc
   return `₹${inr(price)}`;
 }
 
-/** Build a list of *possible* image URLs from many formats, then we preload+filter valid ones. */
+/** Build a list of *possible* image URLs from many formats, then we preload+filter valid ones. 
+ *  Tolerant rules:
+ *   - accepts comma, pipe or semicolon separated lists
+ *   - accepts FOLDER::new-launch/foo/* OR FOLDER::prop-pics/new-launch/foo/*
+ *   - avoids duplicating `new-launch/new-launch` when folder already contains 'new-launch'
+ */
 function buildImageCandidates(p: PropertyRow): string[] {
   const out: string[] = [];
   const push = (u?: string) => {
     if (!u) return;
-    const s = u.trim();
+    const s = String(u).trim();
     if (!s) return;
-    // make relative paths point to /prop-pics
+    // if absolute URL or starts with slash, keep as-is; otherwise make relative to /prop-pics
     const final = (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s.replace(/^\/+/, "")}`;
     if (!out.includes(final)) out.push(final);
   };
 
-  const raw: any = (p as any).images;
+  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery;
   const seg = (p as any).segment ? String((p as any).segment).toLowerCase() : "";
   const slug = (p as any).slug ? String((p as any).slug).toLowerCase() : sluggify((p as any).id || (p as any).title);
   const folderGuesses: string[] = [];
@@ -62,26 +68,45 @@ function buildImageCandidates(p: PropertyRow): string[] {
   if (typeof raw === "string") {
     const text = raw.trim();
 
-    // FOLDER::segment/slug/* or segment/slug/* or segment/slug (no extension)
-    if (text.startsWith("FOLDER::")) {
-      const folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"").replace(/^\/+/, "");
-      // try 1..20 with multiple extensions (pointing under new-launch for FOLDER)
+    // Accept separators: comma, pipe, semicolon
+    const separators = /[,\|;]+/;
+
+    // FOLDER::... handling (tolerant)
+    if (text.toUpperCase().startsWith("FOLDER::")) {
+      let folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"").replace(/^\/+/, "");
+      // if user provided full path like "prop-pics/new-launch/slug" remove leading prop-pics/
+      folder = folder.replace(/^prop-pics\//i, "");
+      // If folder already contains 'new-launch' use directly; otherwise assume it is relative to new-launch folder
+      const useNewLaunchPrefix = !/new-launch/i.test(folder);
       for (let i = 1; i <= 20; i++) {
-        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/new-launch/${folder}/${i}.${ext}`));
+        ["jpg","jpeg","png","webp"].forEach(ext => {
+          const candidate = useNewLaunchPrefix
+            ? `/prop-pics/new-launch/${folder}/${i}.${ext}`
+            : `/prop-pics/${folder}/${i}.${ext}`;
+          push(candidate);
+        });
       }
     } else if (/(.+\/.+)(\*|$)/.test(text) && !/\.[a-z0-9]+$/i.test(text)) {
-      const folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
+      // folder pattern like "segment/slug/*" or "new-launch/slug/*"
+      let folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
+      folder = folder.replace(/^prop-pics\//i, "");
+      const useNewLaunchPrefix = !/new-launch/i.test(folder);
       for (let i = 1; i <= 20; i++) {
-        ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/new-launch/${folder}/${i}.${ext}`));
+        ["jpg","jpeg","png","webp"].forEach(ext => {
+          const candidate = useNewLaunchPrefix
+            ? `/prop-pics/new-launch/${folder}/${i}.${ext}`
+            : `/prop-pics/${folder}/${i}.${ext}`;
+          push(candidate);
+        });
       }
-    } else if (text.includes(",")) {
-      text.split(",").map(s => s.trim()).forEach((x) => push(x));
+    } else if (separators.test(text)) {
+      text.split(separators).map(s => s.trim()).forEach((x) => push(x));
     } else if (text) {
       push(text);
     }
   }
 
-  // 3) Fallback guesses using segment/slug and slug only
+  // 3) Fallback guesses using segment/slug and slug only (non-new-launch generic locations)
   folderGuesses.forEach((folder) => {
     for (let i = 1; i <= 20; i++) {
       ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
@@ -114,7 +139,7 @@ async function preloadImages(urls: string[]): Promise<string[]> {
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
-  if (!slug) return null; // do NOT render on /properties?...
+  if (!slug) return null; // do NOT render on /properties?... (safety)
 
   const key = sluggify(String(slug || ""));
   const location = useLocation() as { state?: { property?: PropertyRow } };
@@ -137,28 +162,23 @@ export default function PropertyDetailsPage() {
         try {
           const nl = await fetchNewLaunch();
           const mapped = nl.map((p: any) => {
-            const slug = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
+            const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
             return {
-              id: p.project_id || slug,
-              slug: slug,
-              title: p.project_name || p.title || slug,
+              id: p.project_id || slugValue,
+              slug: slugValue,
+              title: p.project_name || p.title || slugValue,
               location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`.replace(/^, |, $/, ""),
               price: p.price ? Number(p.price) : 0,
-              // set both fields so downstream filters/readers that use either will work
               listingFor: "under-construction" as const,
               for: "under-construction",
-              // segment used by filters (residential/commercial)
               segment: (p.segment || "residential").toString().toLowerCase(),
               description: p.description || `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
-              // ensure image folder resolves to /prop-pics/new-launch/<slug>/*
-              images: p.gallery_image_urls || `FOLDER::${slug}/*`,
+              images: p.gallery_image_urls || `FOLDER::${slugValue}/*`,
               brochure_url: p.brochure_url || ""
             } as PropertyRow;
           }) as PropertyRow[];
-          // merge sheet data + new launches (sheet first so sheet items remain priority)
           if (alive) setRows([...data, ...mapped]);
         } catch (err) {
-          // fallback: only sheet data
           if (alive) setRows(data);
         }
       } finally {
@@ -209,13 +229,14 @@ export default function PropertyDetailsPage() {
   }, [images, index]);
 
   const [fit, setFit] = useState<"contain"|"cover">("contain");
-  const prev = () => setIndex(i => (i - 1 + images.length) % images.length);
-  const next = () => setIndex(i => (i + 1) % images.length);
+  const prev = () => setIndex(i => (images.length ? (i - 1 + images.length) % images.length : 0));
+  const next = () => setIndex(i => (images.length ? (i + 1) % images.length : 0));
   const goto = (i: number) => setIndex(i);
 
   const waNumber = "919920214015";
-  const waText = `Hi, I'm interested in ${property.title} (${priceLabel(property.price, property.listingFor)}). Please share details.`;
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
+  // waText and waLink must be built only after property is available to avoid reading null
+  const waText = property ? `Hi, I'm interested in ${property.title || property.project_name} (${priceLabel(property.price, property.listingFor)}). Please share details.` : "";
+  const waLink = property ? `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}` : `https://wa.me/${waNumber}`;
 
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -246,13 +267,13 @@ export default function PropertyDetailsPage() {
           <span className="mx-1">/</span>
           <Link to="/properties" className="hover:underline">Properties</Link>
           <span className="mx-1">/</span>
-          <span className="text-gray-700">{property.title}</span>
+          <span className="text-gray-700">{property.title || property.project_name}</span>
         </nav>
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold">{property.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold">{property.title || property.project_name}</h1>
             {property.location ? (
               <p className="text-gray-600 flex items-center gap-2 mt-1">
                 <MapPin size={18} /> {property.location}
@@ -283,7 +304,7 @@ export default function PropertyDetailsPage() {
               <div className="relative aspect-[16/9] bg-black/5">
                 <img
                   src={images[index]}
-                  alt={`${property.title} ${index + 1}`}
+                  alt={`${(property.title || property.project_name)} ${index + 1}`}
                   className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
                   loading="eager"
                 />
@@ -335,7 +356,7 @@ export default function PropertyDetailsPage() {
             <div className="mt-6">
               <BrochureLeadBox project={{
                 project_id: property.id,
-                project_name: property.title,
+                project_name: property.title || property.project_name,
                 slug: property.slug || property.title,
                 brochure_url: property.brochure_url || ""
               }}/>
