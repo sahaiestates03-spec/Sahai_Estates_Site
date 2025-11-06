@@ -23,6 +23,7 @@ export default function FeaturedNewLaunch() {
     (async () => {
       const rows = await fetchNewLaunch();
       // Strict filter: only rows that have featured = TRUE (case-insensitive)
+      console.log("fetchNewLaunch rows:", rows); 
       const featuredOnly = (rows || []).filter(
         (r) => String((r as any).featured || "").toLowerCase() === "true"
       );
