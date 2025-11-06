@@ -1,5 +1,5 @@
 // src/components/Navbar.tsx
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
@@ -25,6 +25,16 @@ export default function Navbar() {
       ref.current = null;
     }
   }
+
+  // cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimer(propOpenTimer);
+      clearTimer(propCloseTimer);
+      clearTimer(subOpenTimer);
+      clearTimer(subCloseTimer);
+    };
+  }, []);
 
   // ---- PROPERTIES (root) handlers ----
   const onPropEnter = () => {
@@ -97,13 +107,8 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-6 text-gray-900">
             <Link to="/" className={isActive("/") ? activeClass : baseLinkClass}>Home</Link>
 
-            {/* FIXED: New Launch should point to filtered properties page */}
-            <Link
-              to="/properties?for=under-construction&segment=residential"
-              className={isActive("/properties?for=under-construction&segment=residential") ? activeClass : baseLinkClass}
-            >
-              New Launch
-            </Link>
+            {/* New Launch now points to /new-launch and uses the same font class */}
+            <Link to="/new-launch" className={isActive("/new-launch") ? activeClass : baseLinkClass}>New Launch</Link>
 
             {/* PROPERTIES (2-level, with delays) */}
             <div
@@ -244,7 +249,10 @@ export default function Navbar() {
             <Link to="/properties?segment=residential&for=rent" onClick={() => setMobileOpen(false)} className="py-2">Residential — Rent</Link>
             <Link to="/properties?segment=commercial&for=resale" onClick={() => setMobileOpen(false)} className="py-2">Commercial — Buy</Link>
             <Link to="/properties?segment=commercial&for=rent" onClick={() => setMobileOpen(false)} className="py-2">Commercial — Rent</Link>
-            <Link to="/properties?for=under-construction&segment=residential" onClick={() => setMobileOpen(false)} className="py-2">New Launch</Link>
+
+            {/* Mobile New Launch link */}
+            <Link to="/new-launch" onClick={() => setMobileOpen(false)} className="py-2">New Launch</Link>
+
             <Link to="/about" onClick={() => setMobileOpen(false)} className="py-2">About</Link>
             <Link to="/services" onClick={() => setMobileOpen(false)} className="py-2">Services</Link>
             <Link to="/blog" onClick={() => setMobileOpen(false)} className="py-2">Blog</Link>
