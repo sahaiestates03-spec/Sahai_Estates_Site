@@ -2,9 +2,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchNewLaunch, type Project } from "../data/newLaunch";
+import LeadCaptureForm from "../components/LeadCaptureForm";
 
 const sluggify = (s?: string) =>
-  (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  (s || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 function rupee(n?: string) {
   if (!n) return "";
@@ -18,23 +23,35 @@ function rupee(n?: string) {
 export default function NewLaunch() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [q, setQ] = useState("");
+  const [activeProject, setActiveProject] = useState<null | {
+    project_name: string;
+    project_id?: string;
+    slug?: string;
+    brochure_url?: string;
+  }>(null);
 
   useEffect(() => {
     fetchNewLaunch().then(setProjects);
   }, []);
 
   const filtered = projects.filter((p) =>
-    (p.project_name + " " + p.locality + " " + p.city + " " + p.developer_name)
+    (p.project_name +
+      " " +
+      (p.locality || "") +
+      " " +
+      (p.city || "") +
+      " " +
+      (p.developer_name || "")
+    )
       .toLowerCase()
       .includes(q.toLowerCase())
   );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-24">
-     <h1 className="text-3xl font-semibold tracking-tight mb-4">
-  New Launch Projects
-</h1>
-
+      <h1 className="text-3xl font-semibold tracking-tight mb-4">
+        New Launch Projects
+      </h1>
 
       <input
         placeholder="Search by project/developer/locality"
@@ -46,18 +63,23 @@ export default function NewLaunch() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.map((p) => {
           const slug = p.slug || sluggify(p.project_name);
+          const priceLabel =
+            p.price_min_inr && p.price_max_inr
+              ? `${rupee(p.price_min_inr)} – ${rupee(p.price_max_inr)}`
+              : "Price on request";
+
           return (
             <div
-            key={slug}
-            className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border bg-white"
-          >
-
+              key={slug}
+              className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border bg-white"
+            >
               <img
-                src={p.hero_image_url}
+                src={p.hero_image_url || "/fallbacks/project-hero.jpg"}
                 alt={p.project_name}
                 className="h-44 w-full object-cover"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = "/fallbacks/project-hero.jpg";
+                  (e.currentTarget as HTMLImageElement).src =
+                    "/fallbacks/project-hero.jpg";
                 }}
               />
 
@@ -67,11 +89,7 @@ export default function NewLaunch() {
                   {p.locality}, {p.city}
                 </div>
                 <div className="text-sm mt-1">{p.unit_types}</div>
-                <div className="text-sm mt-1">
-                  {p.price_min_inr && p.price_max_inr
-                    ? `${rupee(p.price_min_inr)} – ${rupee(p.price_max_inr)}`
-                    : "Price on request"}
-                </div>
+                <div className="text-sm mt-1">{priceLabel}</div>
 
                 <div className="flex gap-2 mt-4">
                   <Link
@@ -81,12 +99,14 @@ export default function NewLaunch() {
                         id: p.project_id,
                         slug,
                         title: p.project_name,
-                        location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`,
-                        price: 0, // Price on request
+                        location: `${p.locality || ""}${
+                          p.locality ? ", " : ""
+                        }${p.city || ""}`,
+                        price: 0,
                         listingFor: "under-construction",
-                        description: `${p.developer_name || ""} new launch in ${
-                          p.locality || p.city || "Mumbai"
-                        }.`,
+                        description: `${
+                          p.developer_name || ""
+                        } new launch in ${p.locality || p.city || "Mumbai"}.`,
                         images:
                           p.gallery_image_urls ||
                           `FOLDER::residential/${slug}/*`,
@@ -98,27 +118,49 @@ export default function NewLaunch() {
                     View Details
                   </Link>
 
-                  <Link
-                    to={`/properties/${slug}#brochure`}
-                    state={{
-                      property: {
-                        id: p.project_id,
+                  <button
+                    onClick={() =>
+                      setActiveProject({
+                        project_name: p.project_name,
+                        project_id: p.project_id,
                         slug,
-                        title: p.project_name,
-                        brochure_url: p.brochure_url || "",
-                        listingFor: "under-construction",
-                      },
-                    }}
+                        brochure_url: p.brochure_url,
+                      })
+                    }
                     className="px-3 py-2 rounded-xl bg-black text-white"
                   >
                     Get Brochure
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Modal for Lead Capture */}
+      {activeProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-3 right-3 text-gray-600"
+              onClick={() => setActiveProject(null)}
+            >
+              ✕
+            </button>
+            <h3 className="text-xl font-semibold mb-3">
+              {activeProject.project_name}
+            </h3>
+            <LeadCaptureForm
+              projectName={activeProject.project_name}
+              projectId={activeProject.project_id}
+              slug={activeProject.slug}
+              brochureUrl={activeProject.brochure_url}
+              onDone={() => setActiveProject(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
