@@ -12,13 +12,14 @@ type Props = {
 export default function LeadCaptureForm({ projectName, projectId = "", slug = "", brochureUrl = "", onDone }: Props) {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [status, setStatus] = useState<"idle"|"sending"|"done">("idle");
-  // <-- Replace with your Apps Script /exec URL from deployment
+
+  // <-- YOUR Apps Script Web App URL (provided by you)
   const WEBHOOK = "https://script.google.com/macros/s/AKfycbyd4KapJaMlO4LqyjDmgxHk-T4fDAQ7xaSXAX5cuc7MseNvdsbwY0hZ2BgRhEpM9fZxvg/exec";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!WEBHOOK || WEBHOOK.includes("https://script.google.com/macros/s/AKfycbyd4KapJaMlO4LqyjDmgxHk-T4fDAQ7xaSXAX5cuc7MseNvdsbwY0hZ2BgRhEpM9fZxvg/exec")) {
-      alert("Webhook URL not set. Please update the component with your Apps Script URL.");
+    if (!WEBHOOK) {
+      alert("Webhook URL missing. Update LeadCaptureForm with your Apps Script URL.");
       return;
     }
     setStatus("sending");
@@ -32,7 +33,6 @@ export default function LeadCaptureForm({ projectName, projectId = "", slug = ""
         phone: form.phone,
         source: "New Launch Page",
         brochure: brochureUrl || "",
-        // helpful tracking data
         utm_source: new URLSearchParams(window.location.search).get("utm_source") || "",
         utm_medium: new URLSearchParams(window.location.search).get("utm_medium") || "",
         utm_campaign: new URLSearchParams(window.location.search).get("utm_campaign") || "",
@@ -46,7 +46,7 @@ export default function LeadCaptureForm({ projectName, projectId = "", slug = ""
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error("Network response not ok " + res.status);
+      if (!res.ok) throw new Error("Network response not ok: " + res.status);
       const json = await res.json();
       if (json?.result !== "success") throw new Error(json?.message || "Unknown server response");
 
