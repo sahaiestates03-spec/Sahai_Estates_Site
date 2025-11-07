@@ -138,29 +138,22 @@ export default function NewLaunch() {
         })}
       </div>
 
-      {/* Modal for Lead Capture */}
-      {activeProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md relative">
-            <button
-              className="absolute top-3 right-3 text-gray-600"
-              onClick={() => setActiveProject(null)}
-            >
-              ✕
-            </button>
-            <h3 className="text-xl font-semibold mb-3">
-              {activeProject.project_name}
-            </h3>
-            <LeadCaptureForm
-              projectName={activeProject.project_name}
-              projectId={activeProject.project_id}
-              slug={activeProject.slug}
-              brochureUrl={activeProject.brochure_url}
-              onDone={() => setActiveProject(null)}
-            />
-          </div>
-        </div>
-      )}
+     {/* Modal */}
+{activeProject && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md relative">
+      <button className="absolute top-3 right-3 text-gray-600" onClick={() => setActiveProject(null)}>✕</button>
+      <h3 className="text-xl font-semibold mb-3">{activeProject.project_name}</h3>
+      <LeadCaptureForm
+        projectName={activeProject.project_name}
+        projectId={activeProject.project_id}
+        slug={activeProject.slug}
+        brochureUrl={activeProject.brochure_url}
+        onDone={() => setActiveProject(null)}
+      />
+    </div>
+  </div>
+)}
     </div>
   );
 }
