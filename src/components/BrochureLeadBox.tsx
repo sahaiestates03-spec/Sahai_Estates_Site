@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { postLead } from "../utils/postLead"; // keep your utils
+import { postLead } from "../utils/postLead";
 import { getUtm } from "../utils/getUtm";
 
 type ProjectMini = {
@@ -19,7 +19,8 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [message, setMessage] = useState<Message>(null);
 
   // webhook - prefer env var in production, fallback to deployed Apps Script
-  const webhook = (import.meta.env.VITE_LEADS_ENDPOINT as string) ||
+  const webhook =
+    (import.meta.env.VITE_LEADS_ENDPOINT as string) ||
     "https://script.google.com/macros/s/AKfycbx-BPBevtbZvfYXBFkPHIbg8ygrTmQlYw4ekdVTa3_twHJzYP4y_Sm2CshJeVMtfjS0ew/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
@@ -44,7 +45,10 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     if (mobile) {
       const m = validateMobile(mobile);
       if (!m) {
-        setMessage({ type: "error", text: "Please enter a valid 10-digit Indian mobile number (starts with 6-9)." });
+        setMessage({
+          type: "error",
+          text: "Please enter a valid 10-digit Indian mobile number (starts with 6-9).",
+        });
         return;
       }
       mobileSan = m;
@@ -70,23 +74,29 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
 
       const resp = await postLead(webhook, payload);
 
-      // expected minimal shape: { result: 'ok' } or { result: 'error', message: '...' }
+      // accept a few common success shapes
       if (resp && (resp.result === "ok" || resp.status === "ok")) {
         setMessage({ type: "success", text: "Thanks — brochure link opened / we will contact you shortly." });
 
-        // open brochure if provided directly
+        // open brochure if project has direct URL
         if (project?.brochure_url) {
-          try { window.open(project.brochure_url, "_blank"); } catch (err) { /* ignore */ }
+          try {
+            window.open(project.brochure_url, "_blank");
+          } catch {}
         }
 
-        // if backend returns a brochure url in response, open it
+        // open any brochure URL returned by backend
         const possibleUrl = resp?.brochureUrl || resp?.brochure_url || resp?.url;
         if (possibleUrl) {
-          try { window.open(possibleUrl, "_blank"); } catch (err) { /* ignore */ }
+          try {
+            window.open(possibleUrl, "_blank");
+          } catch {}
         }
 
-        // clear small fields
-        setName(""); setEmail(""); setMobile("");
+        // clear fields
+        setName("");
+        setEmail("");
+        setMobile("");
       } else {
         setMessage({ type: "error", text: resp?.message || resp?.error || "Server error" });
       }
@@ -130,7 +140,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
           maxLength={10}
           value={mobile}
           onChange={(e) => {
-            // allow only digits locally, keep to 10 chars
             const digits = sanitizeMobile(e.target.value).slice(0, 10);
             setMobile(digits);
             if (message && message.type === "error") setMessage(null);
@@ -146,12 +155,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
             {loading ? "Sending..." : "Download Brochure"}
           </button>
 
-          <button
-            type="button"
-            onClick={quickSubmit}
-            className="px-3 py-2 rounded border"
-            disabled={loading}
-          >
+          <button type="button" onClick={quickSubmit} className="px-3 py-2 rounded border" disabled={loading}>
             Quick
           </button>
         </div>
