@@ -10,13 +10,13 @@ export async function postLead(webhookUrl: string, payload: Record<string, any>)
   const res = await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString()
+    body: params.toString(),
   });
 
   const text = await res.text();
   try {
     return JSON.parse(text);
-  } catch (err) {
+  } catch {
     return { result: "error", message: "invalid json from server", raw: text };
   }
 }
