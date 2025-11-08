@@ -1,4 +1,4 @@
-import ContactForm from '../components/ContactForm';
+import ContactForm from "../components/ContactForm";
 
 export default function ContactPage() {
   return (
@@ -8,9 +8,7 @@ export default function ContactPage() {
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
             Contact <span className="text-brand-500">Us</span>
           </h1>
-          <p className="text-lg text-gray-300">
-            Let's discuss your luxury property needs
-          </p>
+          <p className="text-lg text-gray-300">Let's discuss your luxury property needs</p>
         </div>
       </div>
       <ContactForm />
