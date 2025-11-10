@@ -27,31 +27,36 @@ function inr(n: number) { return n.toLocaleString("en-IN"); }
 function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construction") {
   if (!price || price <= 0) return listingFor === "rent" ? "₹ — / month" : "Price on request";
   if (listingFor === "rent") {
-    if (price >= 1e5) return `${(price / 1e5).toFixed(price/1e5 >= 10 ? 1 : 2)} L / month`;
-    return `₹${inr(price)} / month`;
+    if (price >= 100000) {
+      var lvalue = price / 100000;
+      // keep 1 decimal when >= 10 L; otherwise 2 decimals
+      var decimals = lvalue >= 10 ? 1 : 2;
+      return String(lvalue.toFixed(decimals)) + " L / month";
+    }
+    return "₹" + inr(price) + " / month";
   }
-  if (price >= 1e7) return `₹${(price / 1e7).toFixed(2)} Cr`;
-  if (price >= 1e5) return `₹${(price / 1e5).toFixed(2)} L`;
-  return `₹${inr(price)}`;
+  if (price >= 10000000) return "₹" + String((price / 10000000).toFixed(2)) + " Cr";
+  if (price >= 100000) return "₹" + String((price / 100000).toFixed(2)) + " L";
+  return "₹" + inr(price);
 }
 
-/** Build image candidates (unchanged) */
+/** Build image candidates (no template literals) */
 function buildImageCandidates(p: PropertyRow): string[] {
   const out: string[] = [];
   const push = (u?: string) => {
     if (!u) return;
     const s = String(u).trim();
     if (!s) return;
-    const final = (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s.replace(/^\/+/, "")}`;
-    if (!out.includes(final)) out.push(final);
+    const final = (s.indexOf("http") === 0 || s.indexOf("/") === 0) ? s : "/prop-pics/" + s.replace(/^\/+/, "");
+    if (out.indexOf(final) === -1) out.push(final);
   };
 
   const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery;
   const seg = (p as any).segment ? String((p as any).segment).toLowerCase() : "";
   const slug = (p as any).slug ? String((p as any).slug).toLowerCase() : sluggify((p as any).id || (p as any).title);
   const folderGuesses: string[] = [];
-  if (seg && slug) folderGuesses.push(`${seg}/${slug}`);
-  if (slug) folderGuesses.push(`${slug}`);
+  if (seg && slug) folderGuesses.push(seg + "/" + slug);
+  if (slug) folderGuesses.push(slug);
 
   if (Array.isArray(raw)) {
     raw.forEach((r) => push(String(r || "")));
@@ -60,15 +65,15 @@ function buildImageCandidates(p: PropertyRow): string[] {
   if (typeof raw === "string") {
     const text = raw.trim();
     const separators = /[,\|;]+/;
-    if (text.toUpperCase().startsWith("FOLDER::")) {
+    if (text.toUpperCase().indexOf("FOLDER::") === 0) {
       let folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"").replace(/^\/+/, "");
       folder = folder.replace(/^prop-pics\//i, "");
       const useNewLaunchPrefix = !/new-launch/i.test(folder);
       for (let i = 1; i <= 20; i++) {
         ["jpg","jpeg","png","webp"].forEach(ext => {
           const candidate = useNewLaunchPrefix
-            ? `/prop-pics/new-launch/${folder}/${i}.${ext}`
-            : `/prop-pics/${folder}/${i}.${ext}`;
+            ? "/prop-pics/new-launch/" + folder + "/" + i + "." + ext
+            : "/prop-pics/" + folder + "/" + i + "." + ext;
           push(candidate);
         });
       }
@@ -79,8 +84,8 @@ function buildImageCandidates(p: PropertyRow): string[] {
       for (let i = 1; i <= 20; i++) {
         ["jpg","jpeg","png","webp"].forEach(ext => {
           const candidate = useNewLaunchPrefix
-            ? `/prop-pics/new-launch/${folder}/${i}.${ext}`
-            : `/prop-pics/${folder}/${i}.${ext}`;
+            ? "/prop-pics/new-launch/" + folder + "/" + i + "." + ext
+            : "/prop-pics/" + folder + "/" + i + "." + ext;
           push(candidate);
         });
       }
@@ -93,12 +98,12 @@ function buildImageCandidates(p: PropertyRow): string[] {
 
   folderGuesses.forEach((folder) => {
     for (let i = 1; i <= 20; i++) {
-      ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
+      ["jpg","jpeg","png","webp"].forEach(ext => push("/prop-pics/" + folder + "/" + i + "." + ext));
     }
   });
 
   folderGuesses.forEach((folder) => {
-    ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${ext}`));
+    ["jpg","jpeg","png","webp"].forEach(ext => push("/prop-pics/" + folder + "." + ext));
   });
 
   return out;
@@ -150,11 +155,11 @@ export default function PropertyDetailsPage() {
               const min = p.carpet_min_sqft ? String(p.carpet_min_sqft).trim() : "";
               const max = p.carpet_max_sqft ? String(p.carpet_max_sqft).trim() : "";
               if (min && max) {
-                carpetArea = `${min} - ${max} sqft`;
+                carpetArea = min + " - " + max + " sqft";
               } else if (min) {
-                carpetArea = `${min}+ sqft`;
+                carpetArea = min + "+ sqft";
               } else if (max) {
-                carpetArea = `Up to ${max} sqft`;
+                carpetArea = "Up to " + max + " sqft";
               }
             }
 
@@ -164,7 +169,7 @@ export default function PropertyDetailsPage() {
               title: p.project_name || p.title || slugValue,
               project_name: p.project_name || undefined,
               developer_name: p.developer_name || undefined,
-              location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`.replace(/^, |, $/, ""),
+              location: (p.locality || "") + (p.locality ? ", " : "") + (p.city || ""),
               city: p.city || undefined,
               locality: p.locality || undefined,
               price: p.price_min_inr ? Number(p.price_min_inr) : p.price ? Number(p.price) : 0,
@@ -176,8 +181,8 @@ export default function PropertyDetailsPage() {
               for: "under-construction",
               segment: (p.segment || "residential").toString().toLowerCase(),
               status: p.status || undefined,
-              description: p.description || `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
-              images: p.gallery_image_urls || p.gallery || `FOLDER::${slugValue}/*`,
+              description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+              images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
               brochure_url: p.brochure_url || "",
               youtube_video_url: p.youtube_video_url || undefined,
               virtual_tour_url: p.virtual_tour_url || undefined,
@@ -230,7 +235,7 @@ export default function PropertyDetailsPage() {
               areaSqft: carpetArea || undefined,
             } as PropertyRow;
           }) as PropertyRow[];
-          if (alive) setRows([...data, ...mapped]);
+          if (alive) setRows((data || []).concat(mapped));
         } catch (err) {
           if (alive) setRows(data);
         }
@@ -288,52 +293,43 @@ export default function PropertyDetailsPage() {
   const waNumber = "919920214015"; // +91 9920214015
   const salesPhoneFallback = "9920214015";
 
-  const waText = property ? `Hi, I'm interested in ${property.title || property.project_name} (${priceLabel(property.price, property.listingFor)}). Please share details.` : "";
-  const waLink = property ? `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}` : `https://wa.me/${waNumber}`;
-  const telLink = `tel:+91${(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}`;
+  const waText = property ? "Hi, I'm interested in " + (property.title || property.project_name) + " (" + priceLabel(property.price, property.listingFor) + "). Please share details." : "";
+  const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
+  const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
   // Sheet open / request handling
-  const SHEET_URL = process.env.REACT_APP_SHEET_URL || "";
-  const SUPPORT_EMAIL = process.env.REACT_APP_SUPPORT_EMAIL || "mksajid452@gmail.com";
-  const sheetRequestMail = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Request: Please share Google Sheet access")}&body=${encodeURIComponent(`Hi,\n\nPlease share access to the Google Sheet that contains property data for the website (Sahai Estates).\n\nProject: ${property?.title || property?.project_name || slug}\nProject ID: ${property?.id || slug}\n\nThanks,\nSajid`)}; // default template
+  const SHEET_URL = (process.env.REACT_APP_SHEET_URL || "");
+  const SUPPORT_EMAIL = (process.env.REACT_APP_SUPPORT_EMAIL || "mksajid452@gmail.com");
+  const sheetRequestMail = "mailto:" + SUPPORT_EMAIL + "?subject=" + encodeURIComponent("Request: Please share Google Sheet access") + "&body=" + encodeURIComponent("Hi,\n\nPlease share access to the Google Sheet that contains property data for the website (Sahai Estates).\n\nProject: " + (property ? (property.title || property.project_name || slug) : slug) + "\nProject ID: " + (property ? (property.id || slug) : slug) + "\n\nThanks,\nSajid");
 
   // Utilities: copy JSON, download JSON
-    // Utilities: copy JSON, download JSON
-    // Utilities: copy JSON, download JSON
-  // Utilities: copy JSON, download JSON
-const copyJson = async () => {
-  if (!property) return;
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
-    alert("Property JSON copied to clipboard");
-  } catch (e) {
-    alert("Copy failed. You can download the JSON instead.");
-  }
-};
+  const copyJson = async () => {
+    if (!property) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
+      alert("Property JSON copied to clipboard");
+    } catch (e) {
+      alert("Copy failed. You can download the JSON instead.");
+    }
+  };
 
-const downloadJson = () => {
-  if (!property) return;
+  const downloadJson = () => {
+    if (!property) return;
 
-  // build a safe base filename without template literals
-  const rawName = property.title || property.project_name || property.id || "property";
-  const base = String(rawName)
-    .replace(/\s+/g, "_")       // spaces -> underscores
-    .replace(/[^\w\-\.]/g, ""); // remove any disallowed chars
+    const rawName = property.title || property.project_name || property.id || "property";
+    const base = String(rawName).replace(/\s+/g, "_").replace(/[^\w\-\.]/g, "");
+    const filename = base + ".json";
 
-  // avoid template literal completely
-  const filename = base + ".json";
-
-  const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
-
+    const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const [showRaw, setShowRaw] = useState(false);
 
@@ -404,8 +400,8 @@ const downloadJson = () => {
                   <div className="h-96 flex items-center justify-center bg-gray-100">
                     <img
                       src={images[index]}
-                      alt={`${property.title || "Property"} - ${index + 1}`}
-                      className={`max-h-96 w-full`}
+                      alt={(property.title || "Property") + " - " + (index + 1)}
+                      className="max-h-96 w-full"
                       style={{ objectFit: fit }}
                     />
                   </div>
@@ -420,8 +416,8 @@ const downloadJson = () => {
 
                   {/* Fit toggle */}
                   <div className="absolute right-3 bottom-3 flex gap-2">
-                    <button onClick={() => setFit("contain")} className={`px-2 py-1 rounded ${fit === "contain" ? "bg-black text-white" : "bg-white"}`}>Contain</button>
-                    <button onClick={() => setFit("cover")} className={`px-2 py-1 rounded ${fit === "cover" ? "bg-black text-white" : "bg-white"}`}>Cover</button>
+                    <button onClick={() => setFit("contain")} className={fit === "contain" ? "px-2 py-1 rounded bg-black text-white" : "px-2 py-1 rounded bg-white"}>Contain</button>
+                    <button onClick={() => setFit("cover")} className={fit === "cover" ? "px-2 py-1 rounded bg-black text-white" : "px-2 py-1 rounded bg-white"}>Cover</button>
                   </div>
                 </div>
               ) : (
@@ -433,8 +429,8 @@ const downloadJson = () => {
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto py-2">
                 {images.map((u, i) => (
-                  <button key={u} onClick={() => goto(i)} className={`flex-shrink-0 w-28 h-20 rounded overflow-hidden border ${i === index ? "ring-2 ring-black" : "border-gray-200"}`}>
-                    <img src={u} alt={`thumb-${i}`} className="w-full h-full object-cover" />
+                  <button key={u} onClick={() => goto(i)} className={i === index ? "flex-shrink-0 w-28 h-20 rounded overflow-hidden border ring-2 ring-black" : "flex-shrink-0 w-28 h-20 rounded overflow-hidden border border-gray-200"}>
+                    <img src={u} alt={"thumb-" + i} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
