@@ -1,5 +1,8 @@
 // src/utils/submitLeadHiddenForm.ts
-export default function submitLeadHiddenForm(endpoint: string, data: Record<string,string|number|undefined>) {
+export default function submitLeadHiddenForm(
+  endpoint: string,
+  data: Record<string, string | number | undefined>
+): Promise<{ result: string; message: string }> {
   // endpoint: full /exec URL from Apps Script
   // data: simple flat object: keys => strings
   try {
@@ -22,7 +25,8 @@ export default function submitLeadHiddenForm(endpoint: string, data: Record<stri
       const input = document.createElement("input");
       input.type = "hidden";
       input.name = k;
-      input.value = data[k] === undefined || data[k] === null ? "" : String(data[k]);
+      input.value =
+        data[k] === undefined || data[k] === null ? "" : String(data[k]);
       form.appendChild(input);
     });
 
@@ -31,7 +35,9 @@ export default function submitLeadHiddenForm(endpoint: string, data: Record<stri
 
     // remove form after small delay
     setTimeout(() => {
-      try { document.body.removeChild(form); } catch (e) {}
+      try {
+        document.body.removeChild(form);
+      } catch (e) {}
     }, 8000);
 
     return Promise.resolve({ result: "ok", message: "submitted" });
