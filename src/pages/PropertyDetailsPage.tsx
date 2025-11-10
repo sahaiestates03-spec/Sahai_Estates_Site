@@ -299,6 +299,7 @@ export default function PropertyDetailsPage() {
 
   // Utilities: copy JSON, download JSON
     // Utilities: copy JSON, download JSON
+    // Utilities: copy JSON, download JSON
   const copyJson = async () => {
     if (!property) return;
     try {
@@ -311,23 +312,23 @@ export default function PropertyDetailsPage() {
 
   const downloadJson = () => {
     if (!property) return;
-    // create blob & trigger download with a valid filename
-    const filename = `${(property.title || property.project_name || property.id || "property")
+    // create a safe filename without using template interpolation that could be malformed
+    const base = (property.title || property.project_name || property.id || "property")
       .toString()
-      .replace(/\s+/g, "_")
-      .replace(/[^\w\-\.]/g, "")}.json`;
+      .replace(/\s+/g, "_")       // spaces -> underscores
+      .replace(/[^\w\-\.]/g, ""); // remove any disallowed chars
+    const filename = `${base}.json`; // this is a safe string now
+
     const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    // IMPORTANT: use backticks and ${...} for template interpolation (do not use $(...))
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
   };
-
 
   const [showRaw, setShowRaw] = useState(false);
 
