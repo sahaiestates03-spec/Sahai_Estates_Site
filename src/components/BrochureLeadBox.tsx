@@ -21,7 +21,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   // webhook - prefer env var in production, fallback to deployed Apps Script
   const webhook =
     (import.meta.env.VITE_LEADS_ENDPOINT as string) ||
-    "https://script.google.com/macros/s/AKfycbzBvnZ-XmIkdGelPJog3UbEzUDLekJ77W0ghdVxnuBQXU6JdeG5GvWV8LZDC8eirTrdIA/exec";
+    "https://script.google.com/macros/s/AKfycbxMIG4UIjlfKh2o7NXgFt40_fJxUma6nPIXw6PcE65ePv4eyGptv3ct6BDT8qjQAdlJbQ/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
