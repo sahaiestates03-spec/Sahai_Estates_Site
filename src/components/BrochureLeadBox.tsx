@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { postLead } from "../utils/postLead";
 import { getUtm } from "../utils/getUtm";
+import submitLeadHiddenForm from "../utils/submitLeadHiddenForm";
 
 type ProjectMini = {
   project_id?: string;
@@ -17,6 +18,10 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const LEADS_ENDPOINT =
+  import.meta.env?.VITE_LEADS_ENDPOINT ||
+  "https://script.google.com/macros/s/AKfycbw0ohA0ZR-5G4ADY-QmYGFyln-r_dBcRellmKsZV6A91-GhTJk7hru8MXvztLIIK95ZYA/exec";
+
 
   // webhook - prefer env var in production, fallback to deployed Apps Script
   const webhook =
@@ -29,7 +34,31 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     const m10 = sanitizeMobile(m).slice(-10);
     return /^[6-9]\d{9}$/.test(m10) ? m10 : null;
   }
-
+async function onGetBrochureClick(project) {
+  const payload = {
+    project_id: project.project_id || project.id || "",
+    project_name: project.project_name || project.title || "",
+    slug: project.slug || "",
+    name: "", // can pre-fill if known
+    email: "", // pre-fill if you have
+    mobile: "", // pre-fill if you have
+    source: "brochure-download",
+    brochure_url: project.brochure_url || "",
+    utm_source: "",
+    utm_medium: "",
+    utm_campaign: "",
+    referrer: document.referrer || "",
+    user_agent: navigator.userAgent || "",
+    notes: ""
+  };
+  try {
+    await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
+    // show UI success like "Saved. We'll WhatsApp the brochure shortly."
+  } catch (err) {
+    console.error("Brochure lead submit failed", err);
+    // show UI error
+  }
+}
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setMessage(null);
