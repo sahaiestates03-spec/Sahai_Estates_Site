@@ -298,6 +298,7 @@ export default function PropertyDetailsPage() {
   const sheetRequestMail = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Request: Please share Google Sheet access")}&body=${encodeURIComponent(`Hi,\n\nPlease share access to the Google Sheet that contains property data for the website (Sahai Estates).\n\nProject: ${property?.title || property?.project_name || slug}\nProject ID: ${property?.id || slug}\n\nThanks,\nSajid`)}; // default template
 
   // Utilities: copy JSON, download JSON
+    // Utilities: copy JSON, download JSON
   const copyJson = async () => {
     if (!property) return;
     try {
@@ -307,18 +308,26 @@ export default function PropertyDetailsPage() {
       alert("Copy failed. You can download the JSON instead.");
     }
   };
+
   const downloadJson = () => {
     if (!property) return;
+    // create blob & trigger download with a valid filename
+    const filename = `${(property.title || property.project_name || property.id || "property")
+      .toString()
+      .replace(/\s+/g, "_")
+      .replace(/[^\w\-\.]/g, "")}.json`;
     const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(property.title || property.project_name || property.id || "property").replace(/\s+/g,"_")}.json`;
+    // IMPORTANT: use backticks and ${...} for template interpolation (do not use $(...))
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
   };
+
 
   const [showRaw, setShowRaw] = useState(false);
 
