@@ -163,6 +163,21 @@ export default function PropertyDetailsPage() {
           const nl = await fetchNewLaunch();
           const mapped = nl.map((p: any) => {
             const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
+            
+            // Parse carpet area range
+            let carpetArea = undefined;
+            if (p.carpet_min || p.carpet_max) {
+              const min = p.carpet_min ? String(p.carpet_min).trim() : "";
+              const max = p.carpet_max ? String(p.carpet_max).trim() : "";
+              if (min && max) {
+                carpetArea = `${min} - ${max}`;
+              } else if (min) {
+                carpetArea = `${min}+`;
+              } else if (max) {
+                carpetArea = `Up to ${max}`;
+              }
+            }
+            
             return {
               id: p.project_id || slugValue,
               slug: slugValue,
@@ -174,7 +189,12 @@ export default function PropertyDetailsPage() {
               segment: (p.segment || "residential").toString().toLowerCase(),
               description: p.description || `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
               images: p.gallery_image_urls || `FOLDER::${slugValue}/*`,
-              brochure_url: p.brochure_url || ""
+              brochure_url: p.brochure_url || "",
+              
+              // ✅ FIXED: Add missing fields from Google Sheet columns
+              bedrooms: p.beds_option || p.unit_types || undefined,  // Map from beds_option or unit_types
+              propertyType: p.unit_types || undefined,  // Map from unit_types column
+              areaSqft: carpetArea || undefined,  // Carpet area range formatted
             } as PropertyRow;
           }) as PropertyRow[];
           if (alive) setRows([...data, ...mapped]);
@@ -285,111 +305,4 @@ export default function PropertyDetailsPage() {
               {priceLabel(property.price, property.listingFor)}
             </span>
             <a href={waLink} target="_blank" rel="noreferrer"
-               className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">
-              <MessageCircle size={18}/> Enquire on WhatsApp
-            </a>
-            <a href="tel:+919920214015"
-               className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold">
-              <Phone size={18}/> Call Now
-            </a>
-          </div>
-        </div>
-
-        {/* Gallery */}
-        <div className="bg-white rounded-2xl shadow overflow-hidden">
-          {imgLoading ? (
-            <div className="p-12 text-center text-gray-500">Loading photos…</div>
-          ) : images.length ? (
-            <>
-              <div className="relative aspect-[16/9] bg-black/5">
-                <img
-                  src={images[index]}
-                  alt={`${(property.title || property.project_name)} ${index + 1}`}
-                  className={`w-full h-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"}`}
-                  loading="eager"
-                />
-                {images.length > 1 && (
-                  <>
-                    <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronLeft/></button>
-                    <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow"><ChevronRight/></button>
-                  </>
-                )}
-                <button
-                  onClick={() => setFit(f => f === "contain" ? "cover" : "contain")}
-                  className="absolute bottom-3 right-3 bg-white/90 rounded-md px-3 py-1 text-xs font-medium shadow"
-                >
-                  {fit === "contain" ? "Fit" : "Fill"}
-                </button>
-              </div>
-
-              {images.length > 1 && (
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-gray-50">
-                  {images.map((src, i) => (
-                    <button key={src + i} onClick={() => goto(i)}
-                            className={`h-20 rounded overflow-hidden border ${i === index ? "border-black ring-2 ring-gray-400" : "border-transparent"}`}>
-                      <img src={src} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="p-12 text-center text-gray-500">Photos coming soon</div>
-          )}
-        </div>
-
-        {/* Facts + Enquiry */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow p-6 space-y-6">
-            <h2 className="text-xl font-semibold">Overview</h2>
-            {property.description ? <p className="text-gray-700">{property.description}</p> : null}
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-              {property.bedrooms ? <div className="flex items-center gap-2"><Bed size={18}/> <span className="font-medium">{property.bedrooms} Bedrooms</span></div> : null}
-              {property.bathrooms ? <div className="flex items-center gap-2"><Bath size={18}/> <span className="font-medium">{property.bathrooms} Bathrooms</span></div> : null}
-              {property.areaSqft ? <div className="flex items-center gap-2"><Square size={18}/> <span className="font-medium">{property.areaSqft} sq ft</span></div> : null}
-              {property.propertyType ? <div className="flex items-center gap-2"><span className="font-medium">{property.propertyType}</span></div> : null}
-            </div>
-          </div>
-
-          <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
-            <div className="mt-6">
-              <BrochureLeadBox project={{
-                project_id: property.id,
-                project_name: property.title || property.project_name,
-                slug: property.slug || property.title,
-                brochure_url: property.brochure_url || ""
-              }}/>
-            </div>
-          </aside>
-
-          <aside className="bg-white rounded-2xl shadow p-6 h-max sticky top-28">
-            <div className="text-2xl font-semibold mb-2">{priceLabel(property.price, property.listingFor)}</div>
-            {property.location ? <div className="text-sm text-gray-600 mb-4">{property.location}</div> : null}
-            <a href={waLink} target="_blank" rel="noreferrer"
-               className="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
-              <MessageCircle size={18}/> Enquire on WhatsApp
-            </a>
-            <a href="tel:+919920214015"
-               className="w-full mt-3 inline-flex items-center justify-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-3 rounded-lg font-semibold">
-              <Phone size={18}/> Call Sahai Estates
-            </a>
-            <p className="text-xs text-gray-500 mt-4">RERA No: A51900001512</p>
-          </aside>
-        </div>
-      </div>
-
-      {/* Floating actions */}
-      <a href={waLink} target="_blank" rel="noreferrer"
-         className="fixed bottom-24 right-5 z-50 bg-green-600 text-white p-4 rounded-full shadow-xl hover:scale-110 hover:bg-green-700 transition-all"
-         aria-label="WhatsApp">
-        <MessageCircle size={26} />
-      </a>
-      <a href="tel:+919920214015"
-         className="fixed bottom-5 right-5 z-50 bg-black text-white p-4 rounded-full shadow-xl hover:scale-110 hover:bg-gray-800 transition-all"
-         aria-label="Call">
-        <Phone size={26} />
-      </a>
-    </div>
-  );
-}
+               className="inline-flex items-center gap-2
