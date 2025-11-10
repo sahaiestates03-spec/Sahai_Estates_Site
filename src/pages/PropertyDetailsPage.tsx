@@ -35,19 +35,13 @@ function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construc
   return `₹${inr(price)}`;
 }
 
-/** Build a list of *possible* image URLs from many formats, then we preload+filter valid ones. 
- *  Tolerant rules:
- *   - accepts comma, pipe or semicolon separated lists
- *   - accepts FOLDER::new-launch/foo/* OR FOLDER::prop-pics/new-launch/foo/*
- *   - avoids duplicating `new-launch/new-launch` when folder already contains 'new-launch'
- */
+/** Build image candidates (unchanged) */
 function buildImageCandidates(p: PropertyRow): string[] {
   const out: string[] = [];
   const push = (u?: string) => {
     if (!u) return;
     const s = String(u).trim();
     if (!s) return;
-    // if absolute URL or starts with slash, keep as-is; otherwise make relative to /prop-pics
     const final = (s.startsWith("http") || s.startsWith("/")) ? s : `/prop-pics/${s.replace(/^\/+/, "")}`;
     if (!out.includes(final)) out.push(final);
   };
@@ -59,24 +53,16 @@ function buildImageCandidates(p: PropertyRow): string[] {
   if (seg && slug) folderGuesses.push(`${seg}/${slug}`);
   if (slug) folderGuesses.push(`${slug}`);
 
-  // 1) If images is an array
   if (Array.isArray(raw)) {
     raw.forEach((r) => push(String(r || "")));
   }
 
-  // 2) If images is a string
   if (typeof raw === "string") {
     const text = raw.trim();
-
-    // Accept separators: comma, pipe, semicolon
     const separators = /[,\|;]+/;
-
-    // FOLDER::... handling (tolerant)
     if (text.toUpperCase().startsWith("FOLDER::")) {
       let folder = text.replace(/^FOLDER::/i, "").replace(/\/?\*$/,"").replace(/^\/+/, "");
-      // if user provided full path like "prop-pics/new-launch/slug" remove leading prop-pics/
       folder = folder.replace(/^prop-pics\//i, "");
-      // If folder already contains 'new-launch' use directly; otherwise assume it is relative to new-launch folder
       const useNewLaunchPrefix = !/new-launch/i.test(folder);
       for (let i = 1; i <= 20; i++) {
         ["jpg","jpeg","png","webp"].forEach(ext => {
@@ -87,7 +73,6 @@ function buildImageCandidates(p: PropertyRow): string[] {
         });
       }
     } else if (/(.+\/.+)(\*|$)/.test(text) && !/\.[a-z0-9]+$/i.test(text)) {
-      // folder pattern like "segment/slug/*" or "new-launch/slug/*"
       let folder = text.replace(/\/?\*$/,"").replace(/^\/+/,"");
       folder = folder.replace(/^prop-pics\//i, "");
       const useNewLaunchPrefix = !/new-launch/i.test(folder);
@@ -106,14 +91,12 @@ function buildImageCandidates(p: PropertyRow): string[] {
     }
   }
 
-  // 3) Fallback guesses using segment/slug and slug only (non-new-launch generic locations)
   folderGuesses.forEach((folder) => {
     for (let i = 1; i <= 20; i++) {
       ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${i}.${ext}`));
     }
   });
 
-  // 4) As a final single-file guess
   folderGuesses.forEach((folder) => {
     ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${ext}`));
   });
@@ -121,7 +104,7 @@ function buildImageCandidates(p: PropertyRow): string[] {
   return out;
 }
 
-/** Preload all candidates and keep only valid ones */
+/** Preload images (unchanged) */
 async function preloadImages(urls: string[]): Promise<string[]> {
   const checks = urls.map(
     (u) =>
@@ -139,12 +122,11 @@ async function preloadImages(urls: string[]): Promise<string[]> {
 /* ---------- component ---------- */
 export default function PropertyDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
-  if (!slug) return null; // do NOT render on /properties?... (safety)
+  if (!slug) return null;
 
   const key = sluggify(String(slug || ""));
   const location = useLocation() as { state?: { property?: PropertyRow } };
 
-  // if we came from a card, use that immediately
   const propFromState = location?.state?.property ?? null;
 
   const [rows, setRows] = useState<PropertyRow[]>([]);
@@ -154,47 +136,98 @@ export default function PropertyDetailsPage() {
     let alive = true;
     (async () => {
       try {
-        // 1) main sheet
         const data = await fetchSheet();
         if (!alive) return;
 
-        // 2) new launch CSV ko PropertyRow shape me map karke merge
         try {
           const nl = await fetchNewLaunch();
           const mapped = nl.map((p: any) => {
             const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
-            
-            // Parse carpet area range
+
+            // Parse carpet area range (from provided columns carpet_min_sqft / carpet_max_sqft)
             let carpetArea = undefined;
-            if (p.carpet_min || p.carpet_max) {
-              const min = p.carpet_min ? String(p.carpet_min).trim() : "";
-              const max = p.carpet_max ? String(p.carpet_max).trim() : "";
+            if (p.carpet_min_sqft || p.carpet_max_sqft) {
+              const min = p.carpet_min_sqft ? String(p.carpet_min_sqft).trim() : "";
+              const max = p.carpet_max_sqft ? String(p.carpet_max_sqft).trim() : "";
               if (min && max) {
-                carpetArea = `${min} - ${max}`;
+                carpetArea = `${min} - ${max} sqft`;
               } else if (min) {
-                carpetArea = `${min}+`;
+                carpetArea = `${min}+ sqft`;
               } else if (max) {
-                carpetArea = `Up to ${max}`;
+                carpetArea = `Up to ${max} sqft`;
               }
             }
-            
+
             return {
               id: p.project_id || slugValue,
               slug: slugValue,
               title: p.project_name || p.title || slugValue,
+              project_name: p.project_name || undefined,
+              developer_name: p.developer_name || undefined,
               location: `${p.locality || ""}${p.locality ? ", " : ""}${p.city || ""}`.replace(/^, |, $/, ""),
-              price: p.price ? Number(p.price) : 0,
+              city: p.city || undefined,
+              locality: p.locality || undefined,
+              price: p.price_min_inr ? Number(p.price_min_inr) : p.price ? Number(p.price) : 0,
+              price_min_inr: p.price_min_inr ? Number(p.price_min_inr) : undefined,
+              price_max_inr: p.price_max_inr ? Number(p.price_max_inr) : undefined,
+              all_inclusive_price: p.all_inclusive_price || undefined,
+              price_note: p.price_note || undefined,
               listingFor: "under-construction" as const,
               for: "under-construction",
               segment: (p.segment || "residential").toString().toLowerCase(),
+              status: p.status || undefined,
               description: p.description || `${p.developer_name || ""} new launch in ${p.locality || p.city || "Mumbai"}.`,
-              images: p.gallery_image_urls || `FOLDER::${slugValue}/*`,
+              images: p.gallery_image_urls || p.gallery || `FOLDER::${slugValue}/*`,
               brochure_url: p.brochure_url || "",
-              
-              // ✅ FIXED: Add missing fields from Google Sheet columns
-              bedrooms: p.beds_option || p.unit_types || undefined,  // Map from beds_option or unit_types
-              propertyType: p.unit_types || undefined,  // Map from unit_types column
-              areaSqft: carpetArea || undefined,  // Carpet area range formatted
+              youtube_video_url: p.youtube_video_url || undefined,
+              virtual_tour_url: p.virtual_tour_url || undefined,
+              floor_plan_urls: p.floor_plan_urls || undefined,
+              site_plan_url: p.site_plan_url || undefined,
+              price_list_url: p.price_list_url || undefined,
+              rera_id: p.rera_id || undefined,
+              rera_url: p.rera_url || undefined,
+              launch_date: p.launch_date || undefined,
+              possession_quarter: p.possession_quarter || undefined,
+              possession_year: p.possession_year || undefined,
+              construction_stage: p.construction_stage || undefined,
+              unit_types: p.unit_types || undefined,
+              beds_options: p.beds_options || undefined,
+              carpet_min_sqft: p.carpet_min_sqft || undefined,
+              carpet_max_sqft: p.carpet_max_sqft || undefined,
+              maintenance_psf: p.maintenance_psf || undefined,
+              gst_percent: p.gst_percent || undefined,
+              stamp_duty_percent: p.stamp_duty_percent || undefined,
+              registration_fees: p.registration_fees || undefined,
+              total_acres: p.total_acres || undefined,
+              num_towers: p.num_towers || undefined,
+              floors_per_tower: p.floors_per_tower || undefined,
+              units_total: p.units_total || undefined,
+              elevation_style: p.elevation_style || undefined,
+              architect: p.architect || undefined,
+              contractor: p.contractor || undefined,
+              amenities_primary: p.amenities_primary || undefined,
+              amenities_sports: p.amenities_sports || undefined,
+              amenities_safety: p.amenities_safety || undefined,
+              amenities_green: p.amenities_green || undefined,
+              parking_type: p.parking_type || undefined,
+              parking_ratio: p.parking_ratio || undefined,
+              water_supply: p.water_supply || undefined,
+              power_backup: p.power_backup || undefined,
+              fire_safety: p.fire_safety || undefined,
+              hero_image_url: p.hero_image_url || undefined,
+              gallery_image_urls: p.gallery_image_urls || undefined,
+              sales_person_name: p.sales_person_name || undefined,
+              sales_phone: p.sales_phone || undefined,
+              sales_email: p.sales_email || undefined,
+              meta_title: p.meta_title || undefined,
+              meta_description: p.meta_description || undefined,
+              canonical_url: p.canonical_url || undefined,
+              featured: p.featured || undefined,
+              priority_rank: p.priority_rank || undefined,
+              notes: p.notes || undefined,
+              bedrooms: p.beds_option || p.bedrooms || undefined,
+              propertyType: p.unit_types || undefined,
+              areaSqft: carpetArea || undefined,
             } as PropertyRow;
           }) as PropertyRow[];
           if (alive) setRows([...data, ...mapped]);
@@ -223,7 +256,6 @@ export default function PropertyDetailsPage() {
   const [images, setImages] = useState<string[]>([]);
   const [imgLoading, setImgLoading] = useState(true);
 
-  // Build + preload images once we have the property
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -238,7 +270,6 @@ export default function PropertyDetailsPage() {
     return () => { alive = false; };
   }, [property]);
 
-  // Reset gallery index when images change so index never goes out of bounds
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (!images || images.length === 0) {
@@ -253,10 +284,43 @@ export default function PropertyDetailsPage() {
   const next = () => setIndex(i => (images.length ? (i + 1) % images.length : 0));
   const goto = (i: number) => setIndex(i);
 
-  const waNumber = "919920214015";
-  // waText and waLink must be built only after property is available to avoid reading null
+  // UPDATED: use 9920214015 as requested (international prefix for links)
+  const waNumber = "919920214015"; // +91 9920214015
+  const salesPhoneFallback = "9920214015";
+
   const waText = property ? `Hi, I'm interested in ${property.title || property.project_name} (${priceLabel(property.price, property.listingFor)}). Please share details.` : "";
   const waLink = property ? `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}` : `https://wa.me/${waNumber}`;
+  const telLink = `tel:+91${(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}`;
+
+  // Sheet open / request handling
+  const SHEET_URL = process.env.REACT_APP_SHEET_URL || "";
+  const SUPPORT_EMAIL = process.env.REACT_APP_SUPPORT_EMAIL || "mksajid452@gmail.com";
+  const sheetRequestMail = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Request: Please share Google Sheet access")}&body=${encodeURIComponent(`Hi,\n\nPlease share access to the Google Sheet that contains property data for the website (Sahai Estates).\n\nProject: ${property?.title || property?.project_name || slug}\nProject ID: ${property?.id || slug}\n\nThanks,\nSajid`)}; // default template
+
+  // Utilities: copy JSON, download JSON
+  const copyJson = async () => {
+    if (!property) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
+      alert("Property JSON copied to clipboard");
+    } catch (e) {
+      alert("Copy failed. You can download the JSON instead.");
+    }
+  };
+  const downloadJson = () => {
+    if (!property) return;
+    const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(property.title || property.project_name || property.id || "property").replace(/\s+/g,"_")}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const [showRaw, setShowRaw] = useState(false);
 
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -308,8 +372,8 @@ export default function PropertyDetailsPage() {
                className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
               <MessageCircle size={18} /> Enquire on WhatsApp
             </a>
-            <a href={`tel:+91${property.phone || "8286006356"}`} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg">
-              <Phone size={16} /> Call
+            <a href={telLink} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg">
+              <Phone size={16} /> Call: {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
             </a>
           </div>
         </div>
@@ -326,7 +390,7 @@ export default function PropertyDetailsPage() {
                     <img
                       src={images[index]}
                       alt={`${property.title || "Property"} - ${index + 1}`}
-                      className={`max-h-96 w-full object-${fit}`}
+                      className={`max-h-96 w-full`}
                       style={{ objectFit: fit }}
                     />
                   </div>
@@ -367,6 +431,19 @@ export default function PropertyDetailsPage() {
               <p className="text-gray-700 whitespace-pre-line">
                 {property.description || property.overview || "No description available."}
               </p>
+
+              {/* Video / Virtual tour quick links */}
+              <div className="mt-4 flex gap-3">
+                {property.youtube_video_url ? (
+                  <a href={String(property.youtube_video_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Watch Video</a>
+                ) : null}
+                {property.virtual_tour_url ? (
+                  <a href={String(property.virtual_tour_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Virtual Tour</a>
+                ) : null}
+                {property.brochure_url ? (
+                  <a href={String(property.brochure_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Download Brochure</a>
+                ) : null}
+              </div>
             </div>
 
             {/* Features / Specs */}
@@ -376,7 +453,7 @@ export default function PropertyDetailsPage() {
                 <div className="flex items-center gap-2">
                   <Bed size={18} /> <div>
                     <div className="text-sm">Bedrooms</div>
-                    <div className="font-medium">{property.bedrooms || property.beds || "—"}</div>
+                    <div className="font-medium">{property.bedrooms || property.beds_options || "—"}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -388,7 +465,7 @@ export default function PropertyDetailsPage() {
                 <div className="flex items-center gap-2">
                   <Square size={18} /> <div>
                     <div className="text-sm">Area</div>
-                    <div className="font-medium">{property.areaSqft || property.area || "—"}</div>
+                    <div className="font-medium">{property.areaSqft || property.carpet_min_sqft || "—"}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -401,7 +478,7 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
 
-          {/* Right column: Contact / Brochure / Agent */}
+          {/* Right column: Contact / Brochure / Agent / Sheet */}
           <aside className="space-y-4">
             <div className="sticky top-24">
               <div className="bg-white rounded-lg shadow p-5 space-y-4">
@@ -421,8 +498,8 @@ export default function PropertyDetailsPage() {
                      className="inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
                     <MessageCircle size={18} /> Message on WhatsApp
                   </a>
-                  <a href={`tel:+91${property.phone || "8286006356"}`} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
-                    <Phone size={18} /> Call: {property.phone || "8286006356"}
+                  <a href={telLink} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
+                    <Phone size={18} /> Call: {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
                   </a>
                 </div>
 
@@ -434,6 +511,20 @@ export default function PropertyDetailsPage() {
                     slug: property.slug as any,
                     brochure_url: property.brochure_url || ""
                   }} />
+                </div>
+
+                {/* Sheet actions */}
+                <div className="mt-3 flex flex-col gap-2">
+                  {SHEET_URL ? (
+                    <a href={SHEET_URL} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded text-center">Open Google Sheet</a>
+                  ) : (
+                    <a href={sheetRequestMail} className="px-3 py-2 border rounded text-center">Request Sheet Access (email)</a>
+                  )}
+                  <button onClick={copyJson} className="px-3 py-2 border rounded text-center">Copy property JSON</button>
+                  <button onClick={downloadJson} className="px-3 py-2 border rounded text-center">Download property JSON</button>
+                  <button onClick={() => setShowRaw(s => !s)} className="px-3 py-2 border rounded text-center">
+                    {showRaw ? "Hide sheet fields" : "Show all sheet fields"}
+                  </button>
                 </div>
               </div>
 
@@ -461,6 +552,25 @@ export default function PropertyDetailsPage() {
                   </div>
                 ) : null}
               </div>
+
+              {/* Raw fields panel */}
+              {showRaw && (
+                <div className="bg-white rounded-lg shadow p-4 mt-4 text-xs">
+                  <div className="font-medium mb-2">All sheet fields (raw)</div>
+                  <div className="max-h-64 overflow-auto">
+                    <table className="w-full text-left text-xs">
+                      <tbody>
+                        {Object.entries(property as any).map(([k, v]) => (
+                          <tr key={k} className="border-b">
+                            <td className="py-2 align-top font-medium w-40">{k}</td>
+                            <td className="py-2">{String(v ?? "—")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
         </div>
@@ -477,7 +587,7 @@ export default function PropertyDetailsPage() {
                  className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg">
                 <MessageCircle size={16} /> Message on WhatsApp
               </a>
-              <a href={`tel:+91${property.phone || "8286006356"}`} className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
+              <a href={telLink} className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
                 <Phone size={16} /> Call
               </a>
               <Link to="/properties" className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg">
