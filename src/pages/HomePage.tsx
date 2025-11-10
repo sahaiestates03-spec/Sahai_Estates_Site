@@ -12,9 +12,7 @@ export default function HomePage() {
       <RotatingHero
   images={[
     "/BG-IMG-1.jpg",
-    "/BG-IMG-2.jpg",
     "/BG-IMG-3.jpg",
-    "/BG-IMG-4.jpg",
     "/BG-IMG-5.jpg",
     "/BG-IMG-6.jpg",
     "/BG-IMG-7.jpg",
