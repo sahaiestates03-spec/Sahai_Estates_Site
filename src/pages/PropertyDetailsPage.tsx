@@ -29,7 +29,6 @@ function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construc
   if (listingFor === "rent") {
     if (price >= 100000) {
       var lvalue = price / 100000;
-      // keep 1 decimal when >= 10 L; otherwise 2 decimals
       var decimals = lvalue >= 10 ? 1 : 2;
       return String(lvalue.toFixed(decimals)) + " L / month";
     }
@@ -375,16 +374,28 @@ export default function PropertyDetailsPage() {
               </p>
             ) : null}
           </div>
+
+          {/* Header buttons (Call shows only 'Call' visually) */}
           <div className="flex items-center gap-3">
             <span className="inline-block bg-black text-white px-4 py-2 rounded-lg font-semibold">
               {priceLabel(property.price, property.listingFor)}
             </span>
+
             <a href={waLink} target="_blank" rel="noreferrer"
                className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
               <MessageCircle size={18} /> Enquire on WhatsApp
             </a>
-            <a href={telLink} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg">
-              <Phone size={16} /> Call: {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
+
+            <a
+              href={telLink}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg"
+              aria-label={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
+              title={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
+            >
+              <Phone size={16} /> <span>Call</span>
+              <span className="sr-only">
+                {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
+              </span>
             </a>
           </div>
         </div>
@@ -504,13 +515,28 @@ export default function PropertyDetailsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <a href={waLink} target="_blank" rel="noreferrer"
-                     className="inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
-                    <MessageCircle size={18} /> Message on WhatsApp
+                {/* Full-width contact buttons */}
+                <div className="flex flex-col gap-3">
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 border rounded-lg hover:shadow"
+                    aria-label={"Message on WhatsApp for " + (property.title || property.project_name || "")}
+                  >
+                    <MessageCircle size={18} /> <span>Message on WhatsApp</span>
                   </a>
-                  <a href={telLink} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
-                    <Phone size={18} /> Call: {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
+
+                  <a
+                    href={telLink}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-lg"
+                    aria-label={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
+                    title={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
+                  >
+                    <Phone size={18} /> <span>Call</span>
+                    <span className="sr-only">
+                      {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
+                    </span>
                   </a>
                 </div>
 
