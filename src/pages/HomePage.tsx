@@ -11,7 +11,7 @@ export default function HomePage() {
     <div className="overflow-x-hidden">
       <RotatingHero
   images={[
-    "/BG-IMG-1.jpg
+    "/BG-IMG-1.jpg",
     "/BG-IMG-2.jpg",
     "/BG-IMG-3.jpg",
     "/BG-IMG-4.jpg",
@@ -21,6 +21,7 @@ export default function HomePage() {
     "/BG-IMG-8.jpg",
     "/BG-IMG-9.jpg",
     "/BG-IMG-10.jpg",
+    "/BG-IMG-11.jpg",
   ]}
   interval={6000}
   /* ⬇️ Yahi se height control hoti hai */
