@@ -11,8 +11,8 @@ export default function HomePage() {
     <div className="overflow-x-hidden">
       <RotatingHero
   images={[
-    "/BG-IMG-3.jpg",
     "/BG-IMG-5.jpg",
+    "/BG-IMG-3.jpg",
     "/BG-IMG-6.jpg",
     "/BG-IMG-7.jpg",
     "/BG-IMG-8.jpg",
