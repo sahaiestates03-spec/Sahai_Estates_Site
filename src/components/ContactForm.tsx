@@ -1,15 +1,16 @@
 // src/components/ContactForm.tsx
-import { useState } from "react";
+import React, { useState } from "react";
 import { Phone, Mail, MapPin, Send, MessageCircle } from "lucide-react";
+import submitLeadHiddenForm from "../utils/submitLeadHiddenForm";
 
 /**
- * Contact form that POSTS to a Google Apps Script exec URL using a hidden form + iframe
- * This avoids CORS issues that happen with fetch() -> Apps Script.
+ * NOTE:
+ * - Put the Apps Script exec URL in Vite env var VITE_LEADS_ENDPOINT or it will fall back
+ *   to the hardcoded string set below (your Apps Script exec URL).
  */
-
-const DEFAULT_EXEC_URL = typeof window !== "undefined"
-  ? "https://script.google.com/macros/s/AKfycbxMIG4UIjlfKh2o7NXgFt40_fJxUma6nPIXw6PcE65ePv4eyGptv3ct6BDT8qjQAdlJbQ/exec"
-  : "";
+const LEADS_ENDPOINT =
+  import.meta.env?.VITE_LEADS_ENDPOINT ||
+  "https://script.google.com/macros/s/AKfycbw0ohA0ZR-5G4ADY-QmYGFyln-r_dBcRellmKsZV6A91-GhTJk7hru8MXvztLIIK95ZYA/exec";
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
@@ -20,62 +21,17 @@ export default function ContactForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
 
-  // endpoint chosen at runtime - prefer Vite env, else fallback
-  const LEADS_ENDPOINT =
-    (import.meta && (import.meta as any).env && (import.meta as any).env.VITE_LEADS_ENDPOINT) ||
-    DEFAULT_EXEC_URL;
-
-  function buildHiddenFormAndSubmit(payload: Record<string, string>) {
-    // create a unique iframe name
-    const iframeName = `hidden_iframe_${Date.now()}`;
-    const iframe = document.createElement("iframe");
-    iframe.name = iframeName;
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = LEADS_ENDPOINT;
-    form.enctype = "application/x-www-form-urlencoded";
-    form.target = iframeName;
-
-    // add inputs
-    Object.entries(payload).forEach(([k, v]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = k;
-      input.value = v ?? "";
-      form.appendChild(input);
-    });
-
-    // append and submit
-    document.body.appendChild(form);
-    form.submit();
-
-    // cleanup after a short delay
-    setTimeout(() => {
-      try {
-        document.body.removeChild(form);
-        document.body.removeChild(iframe);
-      } catch (e) {
-        // ignore cleanup errors
-      }
-    }, 5000);
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitStatus("idle");
 
-    // Build payload keys matching your Apps Script expected names
-    const payload: Record<string, string> = {
-      project_id: "CONTACT-FORM",
-      project_name: "Website Contact Form",
-      slug: "contact-form",
+    const payload = {
+      project_id: "CONTACT-PAGE",
+      project_name: "Contact Page",
+      slug: "contact-page",
       name: formData.name || "",
       email: formData.email || "",
       mobile: formData.phone || "",
@@ -86,31 +42,25 @@ export default function ContactForm() {
       utm_campaign: "",
       referrer: document.referrer || "",
       user_agent: navigator.userAgent || "",
-      // optional: pass propertyRequirements into utm_campaign or extra field if you want
       notes: formData.propertyRequirements || "",
     };
 
     try {
-      buildHiddenFormAndSubmit(payload);
-
-      // We can't read response due to cross-origin restrictions, assume success
+      await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
       setSubmitStatus("success");
       setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
     } catch (err) {
-      console.error("form submit failed", err);
+      console.error("Lead submit failed:", err);
       setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
-      // reset status to idle after a few seconds so user can send another
-      setTimeout(() => setSubmitStatus("idle"), 6000);
+      setTimeout(() => setSubmitStatus("idle"), 4000);
     }
   };
 
   const handleWhatsApp = () => {
     const phoneNumber = "919920214015";
-    const message = encodeURIComponent(
-      "Hi, I am interested in learning more about your luxury properties in South Mumbai."
-    );
+    const message = encodeURIComponent("Hi, I am interested in learning more about your luxury properties in South Mumbai.");
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
   };
 
@@ -129,7 +79,6 @@ export default function ContactForm() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
             <h3 className="text-2xl font-bold text-navy-900 mb-6">Contact Information</h3>
-
             <div className="space-y-6 mb-8">
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -166,7 +115,7 @@ export default function ContactForm() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-navy-900 mb-1">Office</h4>
-                  <p className="text-gray-600">#131, 1st Floor, Arun Chamber,<br/>Tardeo, Mumbai - 400034</p>
+                  <p className="text-gray-600">#131, 1st Floor, Arun Chamber,<br />Tardeo, Mumbai - 400034</p>
                   <p className="text-sm text-gray-500 mt-2">By appointment only</p>
                   <p className="text-xs text-gray-500 mt-1">RERA No: A51900001512</p>
                 </div>
@@ -202,44 +151,70 @@ export default function ContactForm() {
 
               {submitStatus === "success" && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-                  Thank you! Your message has been received. We will contact you soon.
+                  Thank you! Your message has been sent successfully. We'll get back to you soon.
                 </div>
               )}
 
               {submitStatus === "error" && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-                  Oops! There was a problem sending your message. Please try again later.
+                  Something went wrong. Please try again or call us on +91 99202 14015.
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                  <input type="text" required value={formData.name} onChange={(e)=>setFormData({...formData,name:e.target.value})}
-                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Your name" />
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                    placeholder="Your name"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
-                  <input type="email" required value={formData.email} onChange={(e)=>setFormData({...formData,email:e.target.value})}
-                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none" placeholder="your.email@example.com" />
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                    placeholder="your.email@example.com"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                  <input type="tel" required value={formData.phone} onChange={(e)=>setFormData({...formData,phone:e.target.value})}
-                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none" placeholder="+91 98765 43210" />
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                    placeholder="+91 98765 43210"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Property Requirements</label>
-                  <textarea value={formData.propertyRequirements} onChange={(e)=>setFormData({...formData,propertyRequirements:e.target.value})} rows={4}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none resize-none" placeholder="Tell me about your property requirements..." />
+                  <textarea
+                    value={formData.propertyRequirements}
+                    onChange={(e) => setFormData({ ...formData, propertyRequirements: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none resize-none"
+                    placeholder="Tell me about your property requirements..."
+                  />
                 </div>
 
-                <button type="submit" disabled={isSubmitting}
-                        className="w-full bg-navy-900 hover:bg-brand-600 text-white py-4 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSubmitting ? "Sending..." : (<><Send size={20}/> Send Message</>)}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-navy-900 hover:bg-brand-600 text-white py-4 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Sending..." : (<><Send size={20} />Send Message</>)}
                 </button>
               </form>
             </div>
