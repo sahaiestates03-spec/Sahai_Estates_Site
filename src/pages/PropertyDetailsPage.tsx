@@ -115,7 +115,7 @@ function buildImageCandidates(p: PropertyRow): string[] {
 
   // 4) As a final single-file guess
   folderGuesses.forEach((folder) => {
-    ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}.${ext}`));
+    ["jpg","jpeg","png","webp"].forEach(ext => push(`/prop-pics/${folder}/${ext}`));
   });
 
   return out;
@@ -305,4 +305,188 @@ export default function PropertyDetailsPage() {
               {priceLabel(property.price, property.listingFor)}
             </span>
             <a href={waLink} target="_blank" rel="noreferrer"
-               className="inline-flex items-center gap-2
+               className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
+              <MessageCircle size={18} /> Enquire on WhatsApp
+            </a>
+            <a href={`tel:+91${property.phone || "8286006356"}`} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg">
+              <Phone size={16} /> Call
+            </a>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Gallery / Images */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="relative bg-white rounded-lg shadow overflow-hidden">
+              {imgLoading ? (
+                <div className="h-72 flex items-center justify-center text-gray-400">Loading images…</div>
+              ) : images.length ? (
+                <div className="relative">
+                  <div className="h-96 flex items-center justify-center bg-gray-100">
+                    <img
+                      src={images[index]}
+                      alt={`${property.title || "Property"} - ${index + 1}`}
+                      className={`max-h-96 w-full object-${fit}`}
+                      style={{ objectFit: fit }}
+                    />
+                  </div>
+
+                  {/* Prev / Next */}
+                  <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow">
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow">
+                    <ChevronRight size={20} />
+                  </button>
+
+                  {/* Fit toggle */}
+                  <div className="absolute right-3 bottom-3 flex gap-2">
+                    <button onClick={() => setFit("contain")} className={`px-2 py-1 rounded ${fit === "contain" ? "bg-black text-white" : "bg-white"}`}>Contain</button>
+                    <button onClick={() => setFit("cover")} className={`px-2 py-1 rounded ${fit === "cover" ? "bg-black text-white" : "bg-white"}`}>Cover</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-72 flex items-center justify-center text-gray-400">No images available</div>
+              )}
+            </div>
+
+            {/* Thumbnails */}
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto py-2">
+                {images.map((u, i) => (
+                  <button key={u} onClick={() => goto(i)} className={`flex-shrink-0 w-28 h-20 rounded overflow-hidden border ${i === index ? "ring-2 ring-black" : "border-gray-200"}`}>
+                    <img src={u} alt={`thumb-${i}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Description */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold mb-3">Overview</h2>
+              <p className="text-gray-700 whitespace-pre-line">
+                {property.description || property.overview || "No description available."}
+              </p>
+            </div>
+
+            {/* Features / Specs */}
+            <div className="bg-white rounded-lg shadow p-6 flex flex-col gap-4">
+              <h3 className="text-lg font-semibold">Property Details</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-gray-700">
+                <div className="flex items-center gap-2">
+                  <Bed size={18} /> <div>
+                    <div className="text-sm">Bedrooms</div>
+                    <div className="font-medium">{property.bedrooms || property.beds || "—"}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Bath size={18} /> <div>
+                    <div className="text-sm">Bathrooms</div>
+                    <div className="font-medium">{(property as any).bathrooms || (property as any).baths || "—"}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Square size={18} /> <div>
+                    <div className="text-sm">Area</div>
+                    <div className="font-medium">{property.areaSqft || property.area || "—"}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin size={18} /> <div>
+                    <div className="text-sm">Location</div>
+                    <div className="font-medium">{property.location || property.locality || "—"}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right column: Contact / Brochure / Agent */}
+          <aside className="space-y-4">
+            <div className="sticky top-24">
+              <div className="bg-white rounded-lg shadow p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-500">Listing</div>
+                    <div className="font-semibold">{(property.listingFor || property.for) || "—"}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">Price</div>
+                    <div className="font-semibold">{priceLabel(property.price, property.listingFor)}</div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <a href={waLink} target="_blank" rel="noreferrer"
+                     className="inline-flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
+                    <MessageCircle size={18} /> Message on WhatsApp
+                  </a>
+                  <a href={`tel:+91${property.phone || "8286006356"}`} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
+                    <Phone size={18} /> Call: {property.phone || "8286006356"}
+                  </a>
+                </div>
+
+                {/* Brochure / Lead box */}
+                <div className="mt-2">
+                  <BrochureLeadBox project={{
+                    project_id: property.id as any,
+                    project_name: property.title || property.project_name,
+                    slug: property.slug as any,
+                    brochure_url: property.brochure_url || ""
+                  }} />
+                </div>
+              </div>
+
+              {/* Additional info card */}
+              <div className="bg-white rounded-lg shadow p-5 mt-4 text-sm text-gray-700">
+                <div className="font-semibold mb-2">Developer</div>
+                <div>{(property as any).developer_name || "—"}</div>
+
+                {property.possession_year || (property as any).possession_date ? (
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-500">Possession</div>
+                    <div className="font-medium">{property.possession_year || (property as any).possession_date}</div>
+                  </div>
+                ) : null}
+
+                {property.rera_id || property.rera_url ? (
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-500">RERA</div>
+                    <div className="font-medium">
+                      {property.rera_id ? property.rera_id : ""}
+                      {property.rera_url ? (
+                        <a href={String(property.rera_url)} target="_blank" rel="noreferrer" className="ml-2 text-blue-600 underline">View</a>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        {/* Footer quick links */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="text-sm text-gray-500">Interested?</div>
+              <div className="text-lg font-semibold">{property.title || property.project_name}</div>
+            </div>
+            <div className="flex gap-3">
+              <a href={waLink} target="_blank" rel="noreferrer"
+                 className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg">
+                <MessageCircle size={16} /> Message on WhatsApp
+              </a>
+              <a href={`tel:+91${property.phone || "8286006356"}`} className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg">
+                <Phone size={16} /> Call
+              </a>
+              <Link to="/properties" className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg">
+                Back to listings
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
