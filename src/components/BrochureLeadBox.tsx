@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { postLead } from "../utils/postLead";
 import { getUtm } from "../utils/getUtm";
 import submitLeadHiddenForm from "../utils/submitLeadHiddenForm";
 
@@ -18,15 +17,11 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+
+  // single source of truth for endpoint
   const LEADS_ENDPOINT =
-  import.meta.env?.VITE_LEADS_ENDPOINT ||
-  "https://script.google.com/macros/s/AKfycbw0ohA0ZR-5G4ADY-QmYGFyln-r_dBcRellmKsZV6A91-GhTJk7hru8MXvztLIIK95ZYA/exec";
-
-
-  // webhook - prefer env var in production, fallback to deployed Apps Script
-  const webhook =
-    (import.meta.env.VITE_LEADS_ENDPOINT as string) ||
-    "https://script.google.com/macros/s/AKfycbxMIG4UIjlfKh2o7NXgFt40_fJxUma6nPIXw6PcE65ePv4eyGptv3ct6BDT8qjQAdlJbQ/exec";
+    (import.meta && (import.meta as any).env && (import.meta as any).env.VITE_LEADS_ENDPOINT) ||
+    "https://script.google.com/macros/s/AKfycbw0ohA0ZR-5G4ADY-QmYGFyln-r_dBcRellmKsZV6A91-GhTJk7hru8MXvztLIIK95ZYA/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
@@ -34,42 +29,50 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     const m10 = sanitizeMobile(m).slice(-10);
     return /^[6-9]\d{9}$/.test(m10) ? m10 : null;
   }
-async function onGetBrochureClick(project) {
-  const payload = {
-    project_id: project.project_id || project.id || "",
-    project_name: project.project_name || project.title || "",
-    slug: project.slug || "",
-    name: "", // can pre-fill if known
-    email: "", // pre-fill if you have
-    mobile: "", // pre-fill if you have
-    source: "brochure-download",
-    brochure_url: project.brochure_url || "",
-    utm_source: "",
-    utm_medium: "",
-    utm_campaign: "",
-    referrer: document.referrer || "",
-    user_agent: navigator.userAgent || "",
-    notes: ""
-  };
-  try {
-    await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
-    // show UI success like "Saved. We'll WhatsApp the brochure shortly."
-  } catch (err) {
-    console.error("Brochure lead submit failed", err);
-    // show UI error
+
+  // Called when user clicks a "Get Brochure" CTA that doesn't need a form (quick lead)
+  async function onGetBrochureClick(proj: ProjectMini) {
+    const payload = {
+      project_id: proj.project_id || proj.slug || "",
+      project_name: proj.project_name || proj.slug || "",
+      slug: proj.slug || "",
+      name: "",
+      email: "",
+      mobile: "",
+      source: "brochure-download",
+      brochure_url: proj.brochure_url || "",
+      utm_source: getUtm("utm_source"),
+      utm_medium: getUtm("utm_medium"),
+      utm_campaign: getUtm("utm_campaign"),
+      referrer: typeof document !== "undefined" ? document.referrer || "" : "",
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
+      notes: "",
+    };
+
+    try {
+      await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
+
+      // immediate UX: open brochure if available and show message
+      if (proj.brochure_url) {
+        try { window.open(proj.brochure_url, "_blank"); } catch {}
+      }
+      setMessage({ type: "success", text: "Saved. We'll WhatsApp the brochure shortly." });
+    } catch (err) {
+      console.error("Brochure lead submit failed", err);
+      setMessage({ type: "error", text: "Could not save lead. Please try again." });
+    }
   }
-}
+
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setMessage(null);
 
-    // Require name and (email or mobile)
     if (!name || (!email && !mobile)) {
       setMessage({ type: "error", text: "Please enter name and either email or mobile." });
       return;
     }
 
-    // If mobile provided, check format
+    // If mobile provided, validate & sanitize
     let mobileSan = "";
     if (mobile) {
       const m = validateMobile(mobile);
@@ -97,42 +100,31 @@ async function onGetBrochureClick(project) {
         utm_source: getUtm("utm_source"),
         utm_medium: getUtm("utm_medium"),
         utm_campaign: getUtm("utm_campaign"),
-        referrer: document.referrer || "",
-        user_agent: navigator.userAgent || "",
+        referrer: typeof document !== "undefined" ? document.referrer || "" : "",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
       };
 
-      const resp = await postLead(webhook, payload);
+      // IMPORTANT: use hidden-form helper to avoid CORS with Apps Script
+      await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
 
-      // accept a few common success shapes
-      if (resp && (resp.result === "ok" || resp.status === "ok")) {
-        setMessage({ type: "success", text: "Thanks — brochure link opened / we will contact you shortly." });
+      // success UX
+      setMessage({ type: "success", text: "Thanks — we'll contact you shortly." });
 
-        // open brochure if project has direct URL
-        if (project?.brochure_url) {
-          try {
-            window.open(project.brochure_url, "_blank");
-          } catch {}
-        }
-
-        // open any brochure URL returned by backend
-        const possibleUrl = resp?.brochureUrl || resp?.brochure_url || resp?.url;
-        if (possibleUrl) {
-          try {
-            window.open(possibleUrl, "_blank");
-          } catch {}
-        }
-
-        // clear fields
-        setName("");
-        setEmail("");
-        setMobile("");
-      } else {
-        setMessage({ type: "error", text: resp?.message || resp?.error || "Server error" });
+      // open brochure if present immediately (server cannot provide a redirect payload back to us)
+      if (project?.brochure_url) {
+        try {
+          window.open(project.brochure_url, "_blank");
+        } catch {}
       }
+
+      // clear fields
+      setName("");
+      setEmail("");
+      setMobile("");
     } catch (err) {
       console.error("BrochureLeadBox error:", err);
-      // friendly fallback — leads may still have been saved server-side
-      setMessage({ type: "success", text: "Saved. We'll WhatsApp the brochure shortly." });
+      // friendly fallback — leads may still have been saved server-side but show error
+      setMessage({ type: "error", text: "Could not save lead. Please try again." });
     } finally {
       setLoading(false);
     }
