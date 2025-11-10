@@ -1,47 +1,42 @@
 // src/utils/submitLeadHiddenForm.ts
-export default function submitLeadHiddenForm(
-  endpoint: string,
-  data: Record<string, string | number | undefined>
-): Promise<{ result: string; message: string }> {
-  // endpoint: full /exec URL from Apps Script
-  // data: simple flat object: keys => strings
-  try {
-    const iframeName = "hidden-lead-iframe";
-    const existing = document.getElementsByName(iframeName)[0];
-    if (!existing) {
-      const iframe = document.createElement("iframe");
-      iframe.name = iframeName;
-      iframe.style.display = "none";
-      document.body.appendChild(iframe);
+// Submits a hidden form POST to the Apps Script endpoint using an iframe (avoids CORS).
+export default function submitLeadHiddenForm(endpoint: string, data: Record<string, string | number | undefined>) {
+  return new Promise<{ result: string; message: string }>((resolve, reject) => {
+    try {
+      if (!endpoint) return reject(new Error("Missing endpoint URL"));
+
+      const iframeName = "hidden-lead-iframe";
+      if (!document.getElementsByName(iframeName)[0]) {
+        const iframe = document.createElement("iframe");
+        iframe.name = iframeName;
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = endpoint;
+      form.target = iframeName;
+      form.enctype = "application/x-www-form-urlencoded";
+
+      Object.keys(data).forEach((k) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = k;
+        input.value = data[k] === undefined || data[k] === null ? "" : String(data[k]);
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+
+      // Submit then remove the form after a short time
+      form.submit();
+      setTimeout(() => {
+        try { document.body.removeChild(form); } catch (e) {}
+        resolve({ result: "ok", message: "submitted" });
+      }, 4000);
+    } catch (err) {
+      reject(err);
     }
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = endpoint;
-    form.target = iframeName;
-    form.enctype = "application/x-www-form-urlencoded";
-
-    Object.keys(data).forEach((k) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = k;
-      input.value =
-        data[k] === undefined || data[k] === null ? "" : String(data[k]);
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-
-    // remove form after small delay
-    setTimeout(() => {
-      try {
-        document.body.removeChild(form);
-      } catch (e) {}
-    }, 8000);
-
-    return Promise.resolve({ result: "ok", message: "submitted" });
-  } catch (err) {
-    return Promise.reject(err);
-  }
+  });
 }
