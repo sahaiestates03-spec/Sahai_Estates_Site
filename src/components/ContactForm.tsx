@@ -1,104 +1,103 @@
+// src/components/ContactForm.tsx
 import { useState } from "react";
 import { Phone, Mail, MapPin, Send, MessageCircle } from "lucide-react";
 
 /**
- * Contact form that posts leads in the same format your Apps Script expects.
- * - uses VITE_LEADS_ENDPOINT env var (set in .env / Vercel)
- * - sends application/x-www-form-urlencoded
- * - fields written to sheet: project_id, project_name, slug, name, email, mobile, source, brochure_url, utm_*, referrer, user_agent
+ * Contact form that posts to the Apps Script webhook configured in VITE_LEADS_ENDPOINT
+ * Sends form-encoded request to avoid preflight CORS.
  */
 
+type FormState = {
+  name: string;
+  email: string;
+  phone: string;
+  propertyRequirements: string;
+};
+
 export default function ContactForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
     name: "",
     email: "",
     phone: "",
-    propertyRequirements: "",
+    propertyRequirements: ""
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">(
-    "idle"
-  );
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // helper to safely read query params (utm)
-  const getQueryParam = (key: string) =>
-    new URLSearchParams(window.location.search).get(key) || "";
+  // Read endpoint from env (Vite)
+  const ENDPOINT = (import.meta as any).env?.VITE_LEADS_ENDPOINT || "";
+
+  const resetForm = () =>
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      propertyRequirements: ""
+    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
     setIsSubmitting(true);
     setSubmitStatus("idle");
+    setErrorMessage(null);
 
     try {
-      // build payload keys that Apps Script expects
-      const payload = new URLSearchParams({
-        // project fields empty for contact form (no specific project)
-        project_id: "",
-        project_name: "",
-        slug: "",
+      if (!ENDPOINT) throw new Error("Lead endpoint not configured (VITE_LEADS_ENDPOINT).");
 
-        // user fields
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        mobile: formData.phone.trim(),
+      // Build form-encoded payload (avoid CORS preflight)
+      const payload = new URLSearchParams();
+      payload.set("project_id", "CONTACT-01");       // generic id for contact leads
+      payload.set("project_name", "Contact Form");
+      payload.set("slug", "contact-form");
+      payload.set("name", formData.name || "");
+      payload.set("email", formData.email || "");
+      payload.set("mobile", formData.phone || "");
+      payload.set("source", "contact-page");
+      payload.set("brochure_url", "");               // not applicable here
+      payload.set("utm_source", "");
+      payload.set("utm_medium", "");
+      payload.set("utm_campaign", "");
+      payload.set("referrer", document.referrer || "");
+      payload.set("user_agent", navigator.userAgent || "");
+      // add propertyRequirements as a remark/map in utm_campaign (or you can add a custom key)
+      payload.set("utm_campaign", formData.propertyRequirements || "");
 
-        // source & brochure
-        source: "contact-page",
-        brochure_url: "",
-
-        // UTM parameters if present
-        utm_source: getQueryParam("utm_source"),
-        utm_medium: getQueryParam("utm_medium"),
-        utm_campaign: getQueryParam("utm_campaign"),
-
-        // referrer & user agent
-        referrer: document.referrer || "",
-        user_agent: navigator.userAgent || "",
-
-        // optional: include the message field so you can inspect it in Apps Script if needed
-        message: formData.propertyRequirements.trim(),
-      });
-
-      // endpoint from env (Vite exposes VITE_* variables)
-      const endpoint =
-        (import.meta.env as any).VITE_LEADS_ENDPOINT ||
-        "https://script.google.com/macros/s/YOUR_DEPLOY/exec";
-
-      const res = await fetch(endpoint, {
+      const res = await fetch(ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-        },
-        body: payload.toString(),
-        // note: using Apps Script with "anyone" deployment avoids CORS issues
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: payload.toString()
       });
 
-      // read text (Apps Script returns JSON text)
-      const text = await res.text();
+      const txt = await res.text().catch(() => "");
+      // the Apps Script returns JSON text with {result:"ok"|"error", message:"..."}
+      let result = { result: "error", message: txt };
+      try { result = JSON.parse(txt); } catch (err) { /* ignore */ }
 
-      if (res.ok) {
+      if (res.ok && result.result === "ok") {
         setSubmitStatus("success");
-        setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
+        resetForm();
       } else {
-        console.error("Lead submit failed", res.status, text);
         setSubmitStatus("error");
+        setErrorMessage(result.message || `HTTP ${res.status}`);
       }
-    } catch (err) {
-      console.error("Network error sending lead", err);
+    } catch (err: any) {
       setSubmitStatus("error");
+      setErrorMessage(String(err.message || err));
     } finally {
       setIsSubmitting(false);
-      // reset status to idle after a short time
-      setTimeout(() => setSubmitStatus("idle"), 5000);
+      // reset status to idle after a short time so the message disappears
+      setTimeout(() => setSubmitStatus("idle"), 4000);
     }
   };
 
   const handleWhatsApp = () => {
     const phoneNumber = "919920214015";
     const message = encodeURIComponent(
-      "Hi, I am interested in learning more about your luxury properties in South Mumbai."
+      "Hi, I am interested in your properties. Please contact me."
     );
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
   };
@@ -127,15 +126,9 @@ export default function ContactForm() {
                 <div>
                   <h4 className="font-semibold text-navy-900 mb-1">Phone</h4>
                   <div className="space-y-1">
-                    <a href="tel:+919920214015" className="text-gray-600 hover:text-brand-600 block">
-                      +91 99202 14015
-                    </a>
-                    <a href="tel:+912223522092" className="text-gray-600 hover:text-brand-600 block">
-                      +91 022 2352 2092
-                    </a>
-                    <a href="tel:+912223513703" className="text-gray-600 hover:text-brand-600 block">
-                      +91 022 2351 3703
-                    </a>
+                    <a href="tel:+919920214015" className="text-gray-600 hover:text-brand-600 block">+91 99202 14015</a>
+                    <a href="tel:+912223522092" className="text-gray-600 hover:text-brand-600 block">+91 022 2352 2092</a>
+                    <a href="tel:+912223513703" className="text-gray-600 hover:text-brand-600 block">+91 022 2351 3703</a>
                   </div>
                   <p className="text-sm text-gray-500 mt-2">Mon-Sat, 10:00 AM - 7:00 PM</p>
                 </div>
@@ -148,12 +141,8 @@ export default function ContactForm() {
                 <div>
                   <h4 className="font-semibold text-navy-900 mb-1">Email</h4>
                   <div className="space-y-1">
-                    <a href="mailto:sahaiestates@yahoo.co.in" className="text-gray-600 hover:text-brand-600 block">
-                      sahaiestates@yahoo.co.in
-                    </a>
-                    <a href="mailto:sahaiestates@gmail.com" className="text-gray-600 hover:text-brand-600 block">
-                      sahaiestates@gmail.com
-                    </a>
+                    <a href="mailto:sahaiestates@yahoo.co.in" className="text-gray-600 hover:text-brand-600 block">sahaiestates@yahoo.co.in</a>
+                    <a href="mailto:sahaiestates@gmail.com" className="text-gray-600 hover:text-brand-600 block">sahaiestates@gmail.com</a>
                   </div>
                   <p className="text-sm text-gray-500 mt-2">We'll respond within 24 hours</p>
                 </div>
@@ -165,11 +154,7 @@ export default function ContactForm() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-navy-900 mb-1">Office</h4>
-                  <p className="text-gray-600">
-                    #131, 1st Floor, Arun Chamber,
-                    <br />
-                    Tardeo, Mumbai - 400034
-                  </p>
+                  <p className="text-gray-600">#131, 1st Floor, Arun Chamber,<br />Tardeo, Mumbai - 400034</p>
                   <p className="text-sm text-gray-500 mt-2">By appointment only</p>
                   <p className="text-xs text-gray-500 mt-1">RERA No: A51900001512</p>
                 </div>
@@ -211,7 +196,7 @@ export default function ContactForm() {
 
               {submitStatus === "error" && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-                  Oops — there was a problem sending your message. Please try again or call us.
+                  Failed to send. {errorMessage ? errorMessage : "Please try again later."}
                 </div>
               )}
 
@@ -219,7 +204,6 @@ export default function ContactForm() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
                   <input
-                    id="contact_name"
                     type="text"
                     required
                     value={formData.name}
@@ -232,7 +216,6 @@ export default function ContactForm() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
                   <input
-                    id="contact_email"
                     type="email"
                     required
                     value={formData.email}
@@ -245,7 +228,6 @@ export default function ContactForm() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
                   <input
-                    id="contact_phone"
                     type="tel"
                     required
                     value={formData.phone}
@@ -258,7 +240,6 @@ export default function ContactForm() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Property Requirements</label>
                   <textarea
-                    id="contact_message"
                     value={formData.propertyRequirements}
                     onChange={(e) => setFormData({ ...formData, propertyRequirements: e.target.value })}
                     rows={4}
@@ -272,14 +253,7 @@ export default function ContactForm() {
                   disabled={isSubmitting}
                   className="w-full bg-navy-900 hover:bg-brand-600 text-white py-4 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
-                    "Sending..."
-                  ) : (
-                    <>
-                      <Send size={20} />
-                      Send Message
-                    </>
-                  )}
+                  {isSubmitting ? "Sending..." : (<><Send size={20} /> Send Message</>)}
                 </button>
               </form>
             </div>
