@@ -300,35 +300,40 @@ export default function PropertyDetailsPage() {
   // Utilities: copy JSON, download JSON
     // Utilities: copy JSON, download JSON
     // Utilities: copy JSON, download JSON
-  const copyJson = async () => {
-    if (!property) return;
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
-      alert("Property JSON copied to clipboard");
-    } catch (e) {
-      alert("Copy failed. You can download the JSON instead.");
-    }
-  };
+  // Utilities: copy JSON, download JSON
+const copyJson = async () => {
+  if (!property) return;
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
+    alert("Property JSON copied to clipboard");
+  } catch (e) {
+    alert("Copy failed. You can download the JSON instead.");
+  }
+};
 
-  const downloadJson = () => {
-    if (!property) return;
-    // create a safe filename without using template interpolation that could be malformed
-    const base = (property.title || property.project_name || property.id || "property")
-      .toString()
-      .replace(/\s+/g, "_")       // spaces -> underscores
-      .replace(/[^\w\-\.]/g, ""); // remove any disallowed chars
-    const filename = `${base}.json`; // this is a safe string now
+const downloadJson = () => {
+  if (!property) return;
 
-    const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
+  // build a safe base filename without template literals
+  const rawName = property.title || property.project_name || property.id || "property";
+  const base = String(rawName)
+    .replace(/\s+/g, "_")       // spaces -> underscores
+    .replace(/[^\w\-\.]/g, ""); // remove any disallowed chars
+
+  // avoid template literal completely
+  const filename = base + ".json";
+
+  const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 
   const [showRaw, setShowRaw] = useState(false);
 
