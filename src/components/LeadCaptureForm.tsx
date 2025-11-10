@@ -13,7 +13,7 @@ export default function LeadCaptureForm({ projectName, projectId = "", slug = ""
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [status, setStatus] = useState<"idle"|"sending"|"done">("idle");
 
-  const WEBHOOK = "https://script.google.com/macros/s/AKfycbyd4KapJaMlO4LqyjDmgxHk-T4fDAQ7xaSXAX5cuc7MseNvdsbwY0hZ2BgRhEpM9fZxvg/exec";
+  const WEBHOOK = "https://script.google.com/macros/s/AKfycbxMIG4UIjlfKh2o7NXgFt40_fJxUma6nPIXw6PcE65ePv4eyGptv3ct6BDT8qjQAdlJbQ/exec";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
