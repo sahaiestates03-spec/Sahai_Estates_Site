@@ -23,15 +23,19 @@ export default function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus("idle");
+  // inside ContactForm.tsx - replace the handleSubmit function with this
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const payload = {
-      project_id: "CONTACT-PAGE",
+  // lock UI
+  setIsSubmitting(true);
+
+  try {
+    // build data object
+    const data = {
+      project_id: "CONTACT-FORM",
       project_name: "Contact Page",
-      slug: "contact-page",
+      slug: "contact-form",
       name: formData.name || "",
       email: formData.email || "",
       mobile: formData.phone || "",
@@ -42,21 +46,69 @@ export default function ContactForm() {
       utm_campaign: "",
       referrer: document.referrer || "",
       user_agent: navigator.userAgent || "",
-      notes: formData.propertyRequirements || "",
+      notes: formData.propertyRequirements || ""
     };
 
-    try {
-      await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
-      setSubmitStatus("success");
-      setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
-    } catch (err) {
-      console.error("Lead submit failed:", err);
-      setSubmitStatus("error");
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSubmitStatus("idle"), 4000);
+    // endpoint from env
+    const ENDPOINT = (import.meta.env.VITE_LEADS_ENDPOINT || "").toString().trim();
+    if (!ENDPOINT) {
+      throw new Error("Leads endpoint not configured (VITE_LEADS_ENDPOINT).");
     }
-  };
+
+    // Create hidden iframe (name)
+    const iframeName = "hidden-lead-iframe";
+    let iframe = document.querySelector(`iframe[name="${iframeName}"]`) as HTMLIFrameElement | null;
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.name = iframeName;
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    // Create hidden form pointed to endpoint
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = ENDPOINT;
+    form.target = iframeName;
+    form.enctype = "application/x-www-form-urlencoded";
+
+    // Add hidden inputs for each key
+    Object.keys(data).forEach((k) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      // ensure string value
+      input.value = (data as any)[k] != null ? String((data as any)[k]) : "";
+      form.appendChild(input);
+    });
+
+    // add the form to document and submit
+    document.body.appendChild(form);
+    form.submit();
+
+    console.log("Submitted hidden form test. Wait a few seconds for sheet to update.");
+
+    // cleanup after a few seconds
+    setTimeout(() => {
+      try { document.body.removeChild(form); } catch (e) {}
+      // do NOT remove iframe because other parts may reuse it
+    }, 5000);
+
+    // show success to user
+    setSubmitStatus("success");
+    setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
+
+    // after few seconds reset status
+    setTimeout(() => setSubmitStatus("idle"), 3500);
+  } catch (err) {
+    console.error("Lead submit failed:", err);
+    setSubmitStatus("error");
+    setTimeout(() => setSubmitStatus("idle"), 3500);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const handleWhatsApp = () => {
     const phoneNumber = "919920214015";
