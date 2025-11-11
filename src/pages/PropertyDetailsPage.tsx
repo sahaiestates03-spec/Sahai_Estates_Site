@@ -296,11 +296,7 @@ export default function PropertyDetailsPage() {
   const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
   const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
-  // Sheet open / request handling
-  const SHEET_URL = (process.env.REACT_APP_SHEET_URL || "");
-  const SUPPORT_EMAIL = (process.env.REACT_APP_SUPPORT_EMAIL || "mksajid452@gmail.com");
-
-  // Utilities: copy JSON, download JSON
+  // Utilities: copy JSON, download JSON (buttons removed from UI per request)
   const copyJson = async () => {
     if (!property) return;
     try {
@@ -328,8 +324,6 @@ export default function PropertyDetailsPage() {
     a.remove();
     URL.revokeObjectURL(url);
   };
-
-  const [showRaw, setShowRaw] = useState(false);
 
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -499,7 +493,7 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
 
-          {/* Right column: Contact / Brochure / Agent / Sheet */}
+          {/* Right column: Contact / Brochure / Agent (sheet buttons removed) */}
           <aside className="space-y-4">
             <div className="sticky top-24">
               <div className="bg-white rounded-lg shadow p-5 space-y-4">
@@ -548,20 +542,6 @@ export default function PropertyDetailsPage() {
                     brochure_url: property.brochure_url || ""
                   }} />
                 </div>
-
-                {/* Sheet actions */}
-                <div className="mt-3 flex flex-col gap-2">
-                  {SHEET_URL ? (
-                    <a href={SHEET_URL} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded text-center">Open Google Sheet</a>
-                  ) : (
-                    <a href={sheetRequestMail} className="px-3 py-2 border rounded text-center">Request Sheet Access (email)</a>
-                  )}
-                  <button onClick={copyJson} className="px-3 py-2 border rounded text-center">Copy property JSON</button>
-                  <button onClick={downloadJson} className="px-3 py-2 border rounded text-center">Download property JSON</button>
-                  <button onClick={() => setShowRaw(s => !s)} className="px-3 py-2 border rounded text-center">
-                    {showRaw ? "Hide sheet fields" : "Show all sheet fields"}
-                  </button>
-                </div>
               </div>
 
               {/* Additional info card */}
@@ -588,25 +568,6 @@ export default function PropertyDetailsPage() {
                   </div>
                 ) : null}
               </div>
-
-              {/* Raw fields panel */}
-              {showRaw && (
-                <div className="bg-white rounded-lg shadow p-4 mt-4 text-xs">
-                  <div className="font-medium mb-2">All sheet fields (raw)</div>
-                  <div className="max-h-64 overflow-auto">
-                    <table className="w-full text-left text-xs">
-                      <tbody>
-                        {Object.entries(property as any).map(([k, v]) => (
-                          <tr key={k} className="border-b">
-                            <td className="py-2 align-top font-medium w-40">{k}</td>
-                            <td className="py-2">{String(v ?? "—")}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </div>
           </aside>
         </div>
