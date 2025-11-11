@@ -136,31 +136,146 @@ export default function PropertyDetailsPage() {
   const [rows, setRows] = useState<PropertyRow[]>([]);
   const [loading, setLoading] = useState<boolean>(!propFromState);
 
+  // ------------------ FIXED fetch logic ------------------
   useEffect(() => {
     let alive = true;
     (async () => {
+      setLoading(true);
       try {
-        const data = await fetchSheet();
-        if (!alive) return;
-
+        // 1) fetch existing sheet data (may return array or {result,data})
+        let sheetResp: any = null;
         try {
-          const nl = await fetchNewLaunch();
-          const mapped = nl.map((p: any) => {
-            const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
+          sheetResp = await fetchSheet();
+        } catch (err) {
+          console.error("fetchSheet error:", err);
+          sheetResp = null;
+        }
 
-            let carpetArea = undefined;
-            if (p.carpet_min_sqft || p.carpet_max_sqft) {
-              const min = p.carpet_min_sqft ? String(p.carpet_min_sqft).trim() : "";
-              const max = p.carpet_max_sqft ? String(p.carpet_max_sqft).trim() : "";
-              if (min && max) {
-                carpetArea = min + " - " + max + " sqft";
-              } else if (min) {
-                carpetArea = min + "+ sqft";
-              } else if (max) {
-                carpetArea = "Up to " + max + " sqft";
-              }
+        let sheetArray: any[] = [];
+        if (Array.isArray(sheetResp)) {
+          sheetArray = sheetResp;
+        } else if (sheetResp && Array.isArray(sheetResp.data)) {
+          sheetArray = sheetResp.data;
+        } else if (sheetResp && Array.isArray(sheetResp.rows)) {
+          sheetArray = sheetResp.rows;
+        } else {
+          sheetArray = [];
+        }
+
+        // 2) fetch new launch data (may return array or {result,data})
+        let nlResp: any = null;
+        try {
+          nlResp = await fetchNewLaunch();
+        } catch (err) {
+          console.error("fetchNewLaunch error:", err);
+          nlResp = null;
+        }
+
+        let nlArray: any[] = [];
+        if (Array.isArray(nlResp)) {
+          nlArray = nlResp;
+        } else if (nlResp && Array.isArray(nlResp.data)) {
+          nlArray = nlResp.data;
+        } else if (nlResp && Array.isArray(nlResp.rows)) {
+          nlArray = nlResp.rows;
+        } else {
+          nlArray = [];
+        }
+
+        // 3) map newLaunch rows into PropertyRow shape (same mapping you used)
+        const mapped: PropertyRow[] = nlArray.map((p: any) => {
+          const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
+
+          let carpetArea = undefined;
+          if (p.carpet_min_sqft || p.carpet_max_sqft) {
+            const min = p.carpet_min_sqft ? String(p.carpet_min_sqft).trim() : "";
+            const max = p.carpet_max_sqft ? String(p.carpet_max_sqft).trim() : "";
+            if (min && max) {
+              carpetArea = min + " - " + max + " sqft";
+            } else if (min) {
+              carpetArea = min + "+ sqft";
+            } else if (max) {
+              carpetArea = "Up to " + max + " sqft";
             }
+          }
 
+          return {
+            id: p.project_id || slugValue,
+            slug: slugValue,
+            title: p.project_name || p.title || slugValue,
+            project_name: p.project_name || undefined,
+            developer_name: p.developer_name || undefined,
+            location: (p.locality || "") + (p.locality ? ", " : "") + (p.city || ""),
+            address: p.address || undefined,
+            pincode: p.pincode || undefined,
+            city: p.city || undefined,
+            locality: p.locality || undefined,
+            price: p.price_min_inr ? Number(p.price_min_inr) : p.price ? Number(p.price) : 0,
+            price_min_inr: p.price_min_inr ? Number(p.price_min_inr) : undefined,
+            price_max_inr: p.price_max_inr ? Number(p.price_max_inr) : undefined,
+            all_inclusive_price: p.all_inclusive_price || undefined,
+            price_note: p.price_note || undefined,
+            listingFor: "under-construction" as const,
+            for: "under-construction",
+            segment: (p.segment || "residential").toString().toLowerCase(),
+            status: p.status || undefined,
+            description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+            images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
+            brochure_url: p.brochure_url || "",
+            youtube_video_url: p.youtube_video_url || undefined,
+            virtual_tour_url: p.virtual_tour_url || undefined,
+            floor_plan_urls: p.floor_plan_urls || undefined,
+            site_plan_url: p.site_plan_url || undefined,
+            price_list_url: p.price_list_url || undefined,
+            rera_id: p.rera_id || undefined,
+            rera_url: p.rera_url || undefined,
+            launch_date: p.launch_date || undefined,
+            possession_quarter: p.possession_quarter || undefined,
+            possession_year: p.possession_year || undefined,
+            construction_stage: p.construction_stage || undefined,
+            unit_types: p.unit_types || undefined,
+            beds_options: p.beds_options || undefined,
+            carpet_min_sqft: p.carpet_min_sqft || undefined,
+            carpet_max_sqft: p.carpet_max_sqft || undefined,
+            total_acres: p.total_acres || undefined,
+            num_towers: p.num_towers || undefined,
+            floors_per_tower: p.floors_per_tower || undefined,
+            elevation_style: p.elevation_style || undefined,
+            architect: p.architect || undefined,
+            contractor: p.contractor || undefined,
+            amenities_primary: p.amenities_primary || undefined,
+            amenities_sports: p.amenities_sports || undefined,
+            amenities_safety: p.amenities_safety || undefined,
+            amenities_green: p.amenities_green || undefined,
+            parking_type: p.parking_type || undefined,
+            parking_ratio: p.parking_ratio || undefined,
+            water_supply: p.water_supply || undefined,
+            power_backup: p.power_backup || undefined,
+            fire_safety: p.fire_safety || undefined,
+            hero_image_url: p.hero_image_url || undefined,
+            gallery_image_urls: p.gallery_image_urls || undefined,
+            sales_person_name: p.sales_person_name || undefined,
+            sales_phone: p.sales_phone || undefined,
+            sales_email: p.sales_email || undefined,
+            meta_title: p.meta_title || undefined,
+            meta_description: p.meta_description || undefined,
+            canonical_url: p.canonical_url || undefined,
+            featured: p.featured || undefined,
+            priority_rank: p.priority_rank || undefined,
+            notes: p.notes || undefined,
+            bedrooms: p.beds_option || p.bedrooms || undefined,
+            propertyType: p.unit_types || undefined,
+            areaSqft: carpetArea || undefined,
+          } as PropertyRow;
+        });
+
+        // 4) map sheetArray rows into PropertyRow if sheetArray actually holds property objects already
+        // If sheetArray are already in PropertyRow shape (from previous processing), keep them as-is.
+        // Otherwise if sheetArray are raw sheet rows (from your sheet) attempt to map minimally:
+        const normalizedSheetRows: PropertyRow[] = sheetArray.map((p: any) => {
+          // If the sheet row already looks like a PropertyRow (has slug/title), keep as-is
+          if (p && (p.slug || p.project_id || p.project_name || p.title)) {
+            const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
             return {
               id: p.project_id || slugValue,
               slug: slugValue,
@@ -177,11 +292,11 @@ export default function PropertyDetailsPage() {
               price_max_inr: p.price_max_inr ? Number(p.price_max_inr) : undefined,
               all_inclusive_price: p.all_inclusive_price || undefined,
               price_note: p.price_note || undefined,
-              listingFor: "under-construction" as const,
-              for: "under-construction",
+              listingFor: p.listingFor || "under-construction",
+              for: p.for || "under-construction",
               segment: (p.segment || "residential").toString().toLowerCase(),
               status: p.status || undefined,
-              description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+              description: p.description || undefined,
               images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
               brochure_url: p.brochure_url || "",
               youtube_video_url: p.youtube_video_url || undefined,
@@ -227,19 +342,26 @@ export default function PropertyDetailsPage() {
               notes: p.notes || undefined,
               bedrooms: p.beds_option || p.bedrooms || undefined,
               propertyType: p.unit_types || undefined,
-              areaSqft: carpetArea || undefined,
+              areaSqft: (p.carpet_min_sqft || p.carpet_max_sqft) ? ((p.carpet_min_sqft||"") + " - " + (p.carpet_max_sqft||"") + " sqft") : undefined,
             } as PropertyRow;
-          }) as PropertyRow[];
-          if (alive) setRows((data || []).concat(mapped));
-        } catch (err) {
-          if (alive) setRows(data);
-        }
+          }
+          // fallback blank
+          return {} as PropertyRow;
+        });
+
+        // 5) final rows: sheet rows first (if any) then mapped new-launch rows.
+        const finalRows = [...normalizedSheetRows.filter(r => r && (r.slug || r.id)), ...mapped];
+        if (alive) setRows(finalRows);
+      } catch (err) {
+        console.error("Error in property fetch flow:", err);
+        if (alive) setRows([]); // ensure rows is at least an array
       } finally {
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
   }, []);
+  // ------------------ END fixed fetch logic ------------------
 
   const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
