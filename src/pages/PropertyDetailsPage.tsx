@@ -299,7 +299,6 @@ export default function PropertyDetailsPage() {
   // Sheet open / request handling
   const SHEET_URL = (process.env.REACT_APP_SHEET_URL || "");
   const SUPPORT_EMAIL = (process.env.REACT_APP_SUPPORT_EMAIL || "mksajid452@gmail.com");
-  const sheetRequestMail = "mailto:" + SUPPORT_EMAIL + "?subject=" + encodeURIComponent("Request: Please share Google Sheet access") + "&body=" + encodeURIComponent("Hi,\n\nPlease share access to the Google Sheet that contains property data for the website (Sahai Estates).\n\nProject: " + (property ? (property.title || property.project_name || slug) : slug) + "\nProject ID: " + (property ? (property.id || slug) : slug) + "\n\nThanks,\nSajid");
 
   // Utilities: copy JSON, download JSON
   const copyJson = async () => {
