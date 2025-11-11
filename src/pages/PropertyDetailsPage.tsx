@@ -39,7 +39,7 @@ function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construc
   return "₹" + inr(price);
 }
 
-/** Build image candidates (no template literals) */
+/** Build image candidates */
 function buildImageCandidates(p: PropertyRow): string[] {
   const out: string[] = [];
   const push = (u?: string) => {
@@ -108,7 +108,7 @@ function buildImageCandidates(p: PropertyRow): string[] {
   return out;
 }
 
-/** Preload images (unchanged) */
+/** Preload images */
 async function preloadImages(urls: string[]): Promise<string[]> {
   const checks = urls.map(
     (u) =>
@@ -168,6 +168,8 @@ export default function PropertyDetailsPage() {
               project_name: p.project_name || undefined,
               developer_name: p.developer_name || undefined,
               location: (p.locality || "") + (p.locality ? ", " : "") + (p.city || ""),
+              address: p.address || undefined,
+              pincode: p.pincode || undefined,
               city: p.city || undefined,
               locality: p.locality || undefined,
               price: p.price_min_inr ? Number(p.price_min_inr) : p.price ? Number(p.price) : 0,
@@ -197,14 +199,9 @@ export default function PropertyDetailsPage() {
               beds_options: p.beds_options || undefined,
               carpet_min_sqft: p.carpet_min_sqft || undefined,
               carpet_max_sqft: p.carpet_max_sqft || undefined,
-              maintenance_psf: p.maintenance_psf || undefined,
-              gst_percent: p.gst_percent || undefined,
-              stamp_duty_percent: p.stamp_duty_percent || undefined,
-              registration_fees: p.registration_fees || undefined,
               total_acres: p.total_acres || undefined,
               num_towers: p.num_towers || undefined,
               floors_per_tower: p.floors_per_tower || undefined,
-              units_total: p.units_total || undefined,
               elevation_style: p.elevation_style || undefined,
               architect: p.architect || undefined,
               contractor: p.contractor || undefined,
@@ -295,31 +292,28 @@ export default function PropertyDetailsPage() {
   const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
   const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
-  // Utilities (kept for future use)
-  const copyJson = async () => {
-    if (!property) return;
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
-      alert("Property JSON copied to clipboard");
-    } catch (e) {
-      alert("Copy failed.");
-    }
+  // small helpers to compose overview values
+  const getAddressLine = (p: any) => {
+    const parts = [];
+    if (p.address) parts.push(p.address);
+    if (p.location) parts.push(p.location);
+    if (p.pincode) parts.push("PIN: " + p.pincode);
+    return parts.join(" • ");
   };
 
-  const downloadJson = () => {
-    if (!property) return;
-    const rawName = property.title || property.project_name || property.id || "property";
-    const base = String(rawName).replace(/\s+/g, "_").replace(/[^\w\-\.]/g, "");
-    const filename = base + ".json";
-    const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  const combineAmenities = (p: any) => {
+    const fields = [
+      p.amenities_primary, p.amenities_sports, p.amenities_safety, p.amenities_green,
+      p.parking_type, p.parking_ratio, p.water_supply, p.power_backup, p.fire_safety
+    ];
+    const list: string[] = [];
+    fields.forEach((f) => {
+      if (!f) return;
+      // if comma-separated in a field, split and add individually
+      String(f).split(/[,;]+/).map(x => x.trim()).forEach(x => { if (x) list.push(x); });
+    });
+    // unique and join
+    return Array.from(new Set(list)).join(", ");
   };
 
   if (!property && loading) {
@@ -342,11 +336,28 @@ export default function PropertyDetailsPage() {
     );
   }
 
-  // small helpers for UI
-  const developer = (property as any).developer_name || "Sahai Estates";
-  const agentName = (property as any).sales_person_name || "Sahai Estates";
-  const agentPhone = (property as any).sales_phone || (property as any).phone || salesPhoneFallback;
-  const heroImage = property.hero_image_url || (images.length ? images[0] : "/prop-pics/default-hero.jpg");
+  // overview values
+  const metaTitle = (property as any).meta_title || "";
+  const metaDescription = (property as any).meta_description || "";
+  const developerName = (property as any).developer_name || "—";
+  const addressLine = getAddressLine(property as any);
+  const reraId = (property as any).rera_id || "—";
+  const reraUrl = (property as any).rera_url || "";
+  const launchDate = (property as any).launch_date || "—";
+  const possessionYear = (property as any).possession_year || "—";
+  const constructionStage = (property as any).construction_stage || "—";
+  const unitTypes = (property as any).unit_types || "—";
+  const bedsOptions = (property as any).beds_options || (property as any).bedrooms || "—";
+  const carpetRange = ((property as any).carpet_min_sqft || (property as any).carpet_max_sqft) ? (((property as any).carpet_min_sqft || "—") + " - " + ((property as any).carpet_max_sqft || "—") + " sqft") : (property.areaSqft || "—");
+  const totalAcres = (property as any).total_acres || "—";
+  const numTowers = (property as any).num_towers || "—";
+  const floorsPerTower = (property as any).floors_per_tower || "—";
+  const elevationStyle = (property as any).elevation_style || "—";
+  const architect = (property as any).architect || "—";
+  const contractor = (property as any).contractor || "—";
+  const amenities = combineAmenities(property as any) || "—";
+  const youtubeUrl = (property as any).youtube_video_url || "";
+  const virtualTour = (property as any).virtual_tour_url || "";
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
@@ -372,7 +383,7 @@ export default function PropertyDetailsPage() {
                 </p>
               ) : null}
               <div className="ml-2 inline-flex items-center px-3 py-1 rounded-full bg-white text-sm text-gray-700 shadow-sm border">
-                <span className="font-medium">{developer}</span>
+                <span className="font-medium">{developerName}</span>
               </div>
               {property.listingFor ? (
                 <div className="inline-flex items-center px-3 py-1 rounded bg-gradient-to-r from-indigo-600 to-indigo-400 text-white text-sm font-medium shadow">
@@ -396,11 +407,11 @@ export default function PropertyDetailsPage() {
             <a
               href={telLink}
               className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:brightness-95 transition"
-              aria-label={"Call " + agentPhone}
-              title={"Call " + agentPhone}
+              aria-label={"Call " + ((property as any).sales_phone || (property as any).phone || salesPhoneFallback)}
+              title={"Call " + ((property as any).sales_phone || (property as any).phone || salesPhoneFallback)}
             >
               <Phone size={16} /> <span className="font-medium">Call</span>
-              <span className="sr-only">{agentPhone}</span>
+              <span className="sr-only">{(property as any).sales_phone || (property as any).phone || salesPhoneFallback}</span>
             </a>
           </div>
         </div>
@@ -415,7 +426,7 @@ export default function PropertyDetailsPage() {
                 <div>
                   <div className="h-96 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={heroImage}
+                      src={ (property as any).hero_image_url || (images.length ? images[0] : "/prop-pics/default-hero.jpg") }
                       alt={(property.title || "Property") + " - " + (index + 1)}
                       className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                     />
@@ -447,25 +458,73 @@ export default function PropertyDetailsPage() {
               )}
             </div>
 
-            {/* Overview */}
+            {/* Overview (detailed) */}
             <div className="bg-white rounded-xl shadow p-6">
               <div className="flex items-start justify-between">
-                <h2 className="text-xl font-semibold">Overview</h2>
+                <div>
+                  <h2 className="text-xl font-semibold">Overview</h2>
+                  {metaTitle ? <div className="text-sm text-gray-500 mt-1">{metaTitle}</div> : null}
+                </div>
                 <div className="text-sm text-gray-500">{property.areaSqft || "—"}</div>
               </div>
+
               <p className="text-gray-700 mt-3 whitespace-pre-line leading-relaxed">
-                {property.description || property.overview || "No description available."}
+                {metaDescription || property.description || "No description available."}
               </p>
 
-              <div className="mt-4 flex flex-wrap gap-3">
-                {property.youtube_video_url ? (
-                  <a href={String(property.youtube_video_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Watch Video</a>
+              {/* Important details grid */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                <div className="space-y-2">
+                  <div className="flex justify-between"><div className="text-gray-500">Developer</div><div className="font-medium">{developerName}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Address</div><div className="font-medium">{addressLine || "—"}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">PIN / City</div><div className="font-medium">{(property as any).pincode || "—"}{(property as any).city ? (" • " + (property as any).city) : ""}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">RERA</div>
+                    <div className="font-medium">
+                      {reraId}
+                      {reraUrl ? <a href={reraUrl} target="_blank" rel="noreferrer" className="ml-2 text-indigo-600 underline">View</a> : null}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between"><div className="text-gray-500">Launch Date</div><div className="font-medium">{launchDate}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Possession</div><div className="font-medium">{possessionYear}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Construction Stage</div><div className="font-medium">{constructionStage}</div></div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between"><div className="text-gray-500">Unit Types</div><div className="font-medium">{unitTypes}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Bedrooms</div><div className="font-medium">{bedsOptions}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Carpet Area</div><div className="font-medium">{carpetRange}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Total Area (acres)</div><div className="font-medium">{totalAcres}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Towers</div><div className="font-medium">{numTowers}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Floors / Tower</div><div className="font-medium">{floorsPerTower}</div></div>
+                  <div className="flex justify-between"><div className="text-gray-500">Elevation</div><div className="font-medium">{elevationStyle}</div></div>
+                </div>
+              </div>
+
+              {/* Architect / Contractor / Amenities */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                <div>
+                  <div className="text-gray-500">Architect</div>
+                  <div className="font-medium mt-1">{architect}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Contractor</div>
+                  <div className="font-medium mt-1">{contractor}</div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="text-gray-500 text-sm">Amenities & Facilities</div>
+                <div className="mt-1 text-sm font-medium">{amenities}</div>
+              </div>
+
+              {/* Media */}
+              <div className="mt-5 flex flex-wrap gap-3">
+                {youtubeUrl ? (
+                  <a href={youtubeUrl} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Watch Video</a>
                 ) : null}
-                {property.virtual_tour_url ? (
-                  <a href={String(property.virtual_tour_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Virtual Tour</a>
-                ) : null}
-                {property.brochure_url ? (
-                  <a href={String(property.brochure_url)} target="_blank" rel="noreferrer" className="px-3 py-2 bg-indigo-600 text-white rounded">Download Brochure</a>
+                {virtualTour ? (
+                  <a href={virtualTour} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Virtual Tour</a>
                 ) : null}
               </div>
             </div>
@@ -502,18 +561,14 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
 
-          {/* Right column / Agent CTA */}
+          {/* Right column / Agent CTA & Brochure */}
           <aside className="space-y-4">
             <div className="sticky top-24">
               <div className="bg-white rounded-2xl shadow p-5 space-y-4 border">
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <img src="/prop-pics/agent-placeholder.png" alt={"agent-" + agentName} className="w-full h-full object-cover" />
-                  </div>
                   <div className="flex-1">
-                    <div className="text-sm text-gray-500">Listed by</div>
-                    <div className="font-semibold">{agentName}</div>
-                    <div className="text-xs text-gray-500 mt-1">{developer}</div>
+                    <div className="text-sm text-gray-500">Contact</div>
+                    <div className="font-semibold">{developerName}</div>
 
                     <div className="mt-3 flex gap-2">
                       <a href={waLink} target="_blank" rel="noreferrer"
@@ -522,20 +577,14 @@ export default function PropertyDetailsPage() {
                       </a>
                       <a href={telLink}
                          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg shadow transition"
-                         aria-label={"Call " + agentPhone}
-                         title={"Call " + agentPhone}
+                         aria-label={"Call " + ((property as any).sales_phone || (property as any).phone || salesPhoneFallback)}
+                         title={"Call " + ((property as any).sales_phone || (property as any).phone || salesPhoneFallback)}
                       >
                         <Phone size={16} /> <span className="text-sm">Call</span>
-                        <span className="sr-only">{agentPhone}</span>
+                        <span className="sr-only">{(property as any).sales_phone || (property as any).phone || salesPhoneFallback}</span>
                       </a>
                     </div>
                   </div>
-                </div>
-
-                {/* Quick trust & details */}
-                <div className="flex items-center justify-between gap-3 mt-2">
-                  <div className="text-xs text-gray-500">Status</div>
-                  <div className="text-sm font-medium">{property.status || "—"}</div>
                 </div>
 
                 <div className="mt-3">
@@ -551,7 +600,7 @@ export default function PropertyDetailsPage() {
               {/* Developer & RERA card */}
               <div className="bg-white rounded-xl shadow p-5 mt-4 text-sm text-gray-700 border">
                 <div className="font-semibold mb-2">Developer</div>
-                <div>{developer}</div>
+                <div>{developerName}</div>
                 {property.possession_year ? (
                   <div className="mt-3">
                     <div className="text-xs text-gray-500">Possession</div>
