@@ -21,7 +21,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   // single source of truth for endpoint
   const LEADS_ENDPOINT =
     (import.meta && (import.meta as any).env && (import.meta as any).env.VITE_LEADS_ENDPOINT) ||
-    "https://script.google.com/macros/s/AKfycbxHBJ2lUI_9xnTQVMVwDnOTkJNhnLWBALQrHtSdIH4oMhG-5dB4VNtiPBS94kCsE5xZ1Q/exec";
+    "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
