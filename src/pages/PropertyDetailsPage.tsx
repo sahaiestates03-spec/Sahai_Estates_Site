@@ -148,7 +148,6 @@ export default function PropertyDetailsPage() {
           const mapped = nl.map((p: any) => {
             const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
 
-            // Parse carpet area range (from provided columns carpet_min_sqft / carpet_max_sqft)
             let carpetArea = undefined;
             if (p.carpet_min_sqft || p.carpet_max_sqft) {
               const min = p.carpet_min_sqft ? String(p.carpet_min_sqft).trim() : "";
@@ -288,7 +287,7 @@ export default function PropertyDetailsPage() {
   const next = () => setIndex(i => (images.length ? (i + 1) % images.length : 0));
   const goto = (i: number) => setIndex(i);
 
-  // UPDATED: use 9920214015 as requested (international prefix for links)
+  // UPDATED: use 9920214015 as requested
   const waNumber = "919920214015"; // +91 9920214015
   const salesPhoneFallback = "9920214015";
 
@@ -296,24 +295,22 @@ export default function PropertyDetailsPage() {
   const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
   const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
-  // Utilities: copy JSON, download JSON (buttons removed from UI per request)
+  // Utilities (kept for future use)
   const copyJson = async () => {
     if (!property) return;
     try {
       await navigator.clipboard.writeText(JSON.stringify(property, null, 2));
       alert("Property JSON copied to clipboard");
     } catch (e) {
-      alert("Copy failed. You can download the JSON instead.");
+      alert("Copy failed.");
     }
   };
 
   const downloadJson = () => {
     if (!property) return;
-
     const rawName = property.title || property.project_name || property.id || "property";
     const base = String(rawName).replace(/\s+/g, "_").replace(/[^\w\-\.]/g, "");
     const filename = base + ".json";
-
     const blob = new Blob([JSON.stringify(property, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -345,9 +342,16 @@ export default function PropertyDetailsPage() {
     );
   }
 
+  // small helpers for UI
+  const developer = (property as any).developer_name || "Sahai Estates";
+  const agentName = (property as any).sales_person_name || "Sahai Estates";
+  const agentPhone = (property as any).sales_phone || (property as any).phone || salesPhoneFallback;
+  const heroImage = property.hero_image_url || (images.length ? images[0] : "/prop-pics/default-hero.jpg");
+
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 py-10">
+
         {/* Breadcrumbs */}
         <nav className="text-sm text-gray-500">
           <Link to="/" className="hover:underline">Home</Link>
@@ -358,97 +362,102 @@ export default function PropertyDetailsPage() {
         </nav>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold">{property.title || property.project_name}</h1>
-            {property.location ? (
-              <p className="text-gray-600 flex items-center gap-2 mt-1">
-                <MapPin size={18} /> {property.location}
-              </p>
-            ) : null}
+            <h1 className="text-3xl lg:text-4xl font-serif font-bold leading-tight">{property.title || property.project_name}</h1>
+            <div className="mt-2 flex items-center gap-3">
+              {property.location ? (
+                <p className="text-gray-600 flex items-center gap-2">
+                  <MapPin size={16} /> <span>{property.location}</span>
+                </p>
+              ) : null}
+              <div className="ml-2 inline-flex items-center px-3 py-1 rounded-full bg-white text-sm text-gray-700 shadow-sm border">
+                <span className="font-medium">{developer}</span>
+              </div>
+              {property.listingFor ? (
+                <div className="inline-flex items-center px-3 py-1 rounded bg-gradient-to-r from-indigo-600 to-indigo-400 text-white text-sm font-medium shadow">
+                  {(property.listingFor || "").toString().replace("-", " ")}
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* Header buttons (Call shows only 'Call' visually) */}
+          {/* Top CTAs */}
           <div className="flex items-center gap-3">
-            <span className="inline-block bg-black text-white px-4 py-2 rounded-lg font-semibold">
-              {priceLabel(property.price, property.listingFor)}
-            </span>
+            <div className="inline-flex items-center px-4 py-2 rounded-lg bg-black text-white font-semibold shadow">
+              <span className="mr-3 text-sm">{priceLabel(property.price, property.listingFor)}</span>
+            </div>
 
             <a href={waLink} target="_blank" rel="noreferrer"
-               className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:shadow">
-              <MessageCircle size={18} /> Enquire on WhatsApp
+               className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:shadow transition">
+              <MessageCircle size={18} /> <span className="font-medium">Enquire on WhatsApp</span>
             </a>
 
             <a
               href={telLink}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg"
-              aria-label={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
-              title={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:brightness-95 transition"
+              aria-label={"Call " + agentPhone}
+              title={"Call " + agentPhone}
             >
-              <Phone size={16} /> <span>Call</span>
-              <span className="sr-only">
-                {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
-              </span>
+              <Phone size={16} /> <span className="font-medium">Call</span>
+              <span className="sr-only">{agentPhone}</span>
             </a>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Gallery / Images */}
+          {/* Gallery */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="relative bg-white rounded-lg shadow overflow-hidden">
+            <div className="relative bg-white rounded-xl shadow overflow-hidden border">
               {imgLoading ? (
-                <div className="h-72 flex items-center justify-center text-gray-400">Loading images…</div>
+                <div className="h-96 flex items-center justify-center text-gray-400">Loading images…</div>
               ) : images.length ? (
-                <div className="relative">
-                  <div className="h-96 flex items-center justify-center bg-gray-100">
+                <div>
+                  <div className="h-96 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={images[index]}
+                      src={heroImage}
                       alt={(property.title || "Property") + " - " + (index + 1)}
-                      className="max-h-96 w-full"
-                      style={{ objectFit: fit }}
+                      className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                     />
                   </div>
 
-                  {/* Prev / Next */}
-                  <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow">
+                  {/* Controls */}
+                  <button onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow">
                     <ChevronLeft size={20} />
                   </button>
-                  <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow">
+                  <button onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow">
                     <ChevronRight size={20} />
                   </button>
 
-                  {/* Fit toggle */}
-                  <div className="absolute right-3 bottom-3 flex gap-2">
-                    <button onClick={() => setFit("contain")} className={fit === "contain" ? "px-2 py-1 rounded bg-black text-white" : "px-2 py-1 rounded bg-white"}>Contain</button>
-                    <button onClick={() => setFit("cover")} className={fit === "cover" ? "px-2 py-1 rounded bg-black text-white" : "px-2 py-1 rounded bg-white"}>Cover</button>
+                  {/* thumbnails */}
+                  <div className="flex gap-2 px-4 py-3 overflow-x-auto bg-white border-t">
+                    {images.map((u, i) => (
+                      <button
+                        key={u + "-" + i}
+                        onClick={() => goto(i)}
+                        className={i === index ? "flex-shrink-0 w-28 h-20 rounded overflow-hidden border-2 border-indigo-600" : "flex-shrink-0 w-28 h-20 rounded overflow-hidden border border-gray-200"}
+                      >
+                        <img src={u} alt={"thumb-" + i} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
                   </div>
                 </div>
               ) : (
-                <div className="h-72 flex items-center justify-center text-gray-400">No images available</div>
+                <div className="h-96 flex items-center justify-center text-gray-400">No images available</div>
               )}
             </div>
 
-            {/* Thumbnails */}
-            {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto py-2">
-                {images.map((u, i) => (
-                  <button key={u} onClick={() => goto(i)} className={i === index ? "flex-shrink-0 w-28 h-20 rounded overflow-hidden border ring-2 ring-black" : "flex-shrink-0 w-28 h-20 rounded overflow-hidden border border-gray-200"}>
-                    <img src={u} alt={"thumb-" + i} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+            {/* Overview */}
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="flex items-start justify-between">
+                <h2 className="text-xl font-semibold">Overview</h2>
+                <div className="text-sm text-gray-500">{property.areaSqft || "—"}</div>
               </div>
-            )}
-
-            {/* Description */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-3">Overview</h2>
-              <p className="text-gray-700 whitespace-pre-line">
+              <p className="text-gray-700 mt-3 whitespace-pre-line leading-relaxed">
                 {property.description || property.overview || "No description available."}
               </p>
 
-              {/* Video / Virtual tour quick links */}
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 {property.youtube_video_url ? (
                   <a href={String(property.youtube_video_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Watch Video</a>
                 ) : null}
@@ -456,36 +465,36 @@ export default function PropertyDetailsPage() {
                   <a href={String(property.virtual_tour_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Virtual Tour</a>
                 ) : null}
                 {property.brochure_url ? (
-                  <a href={String(property.brochure_url)} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Download Brochure</a>
+                  <a href={String(property.brochure_url)} target="_blank" rel="noreferrer" className="px-3 py-2 bg-indigo-600 text-white rounded">Download Brochure</a>
                 ) : null}
               </div>
             </div>
 
-            {/* Features / Specs */}
-            <div className="bg-white rounded-lg shadow p-6 flex flex-col gap-4">
-              <h3 className="text-lg font-semibold">Property Details</h3>
+            {/* Features */}
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="text-lg font-semibold mb-3">Property Details</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-gray-700">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Bed size={18} /> <div>
-                    <div className="text-sm">Bedrooms</div>
+                    <div className="text-xs text-gray-500">Bedrooms</div>
                     <div className="font-medium">{property.bedrooms || property.beds_options || "—"}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Bath size={18} /> <div>
-                    <div className="text-sm">Bathrooms</div>
+                    <div className="text-xs text-gray-500">Bathrooms</div>
                     <div className="font-medium">{(property as any).bathrooms || (property as any).baths || "—"}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Square size={18} /> <div>
-                    <div className="text-sm">Area</div>
+                    <div className="text-xs text-gray-500">Area</div>
                     <div className="font-medium">{property.areaSqft || property.carpet_min_sqft || "—"}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <MapPin size={18} /> <div>
-                    <div className="text-sm">Location</div>
+                    <div className="text-xs text-gray-500">Location</div>
                     <div className="font-medium">{property.location || property.locality || "—"}</div>
                   </div>
                 </div>
@@ -493,48 +502,43 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
 
-          {/* Right column: Contact / Brochure / Agent (sheet buttons removed) */}
+          {/* Right column / Agent CTA */}
           <aside className="space-y-4">
             <div className="sticky top-24">
-              <div className="bg-white rounded-lg shadow p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-gray-500">Listing</div>
-                    <div className="font-semibold">{(property.listingFor || property.for) || "—"}</div>
+              <div className="bg-white rounded-2xl shadow p-5 space-y-4 border">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <img src="/prop-pics/agent-placeholder.png" alt={"agent-" + agentName} className="w-full h-full object-cover" />
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">Price</div>
-                    <div className="font-semibold">{priceLabel(property.price, property.listingFor)}</div>
+                  <div className="flex-1">
+                    <div className="text-sm text-gray-500">Listed by</div>
+                    <div className="font-semibold">{agentName}</div>
+                    <div className="text-xs text-gray-500 mt-1">{developer}</div>
+
+                    <div className="mt-3 flex gap-2">
+                      <a href={waLink} target="_blank" rel="noreferrer"
+                         className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:shadow transition">
+                        <MessageCircle size={16} /> <span className="text-sm">Message</span>
+                      </a>
+                      <a href={telLink}
+                         className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg shadow transition"
+                         aria-label={"Call " + agentPhone}
+                         title={"Call " + agentPhone}
+                      >
+                        <Phone size={16} /> <span className="text-sm">Call</span>
+                        <span className="sr-only">{agentPhone}</span>
+                      </a>
+                    </div>
                   </div>
                 </div>
 
-                {/* Full-width contact buttons */}
-                <div className="flex flex-col gap-3">
-                  <a
-                    href={waLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 border rounded-lg hover:shadow"
-                    aria-label={"Message on WhatsApp for " + (property.title || property.project_name || "")}
-                  >
-                    <MessageCircle size={18} /> <span>Message on WhatsApp</span>
-                  </a>
-
-                  <a
-                    href={telLink}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-lg"
-                    aria-label={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
-                    title={"Call " + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback)}
-                  >
-                    <Phone size={18} /> <span>Call</span>
-                    <span className="sr-only">
-                      {(property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback}
-                    </span>
-                  </a>
+                {/* Quick trust & details */}
+                <div className="flex items-center justify-between gap-3 mt-2">
+                  <div className="text-xs text-gray-500">Status</div>
+                  <div className="text-sm font-medium">{property.status || "—"}</div>
                 </div>
 
-                {/* Brochure / Lead box */}
-                <div className="mt-2">
+                <div className="mt-3">
                   <BrochureLeadBox project={{
                     project_id: property.id as any,
                     project_name: property.title || property.project_name,
@@ -544,15 +548,14 @@ export default function PropertyDetailsPage() {
                 </div>
               </div>
 
-              {/* Additional info card */}
-              <div className="bg-white rounded-lg shadow p-5 mt-4 text-sm text-gray-700">
+              {/* Developer & RERA card */}
+              <div className="bg-white rounded-xl shadow p-5 mt-4 text-sm text-gray-700 border">
                 <div className="font-semibold mb-2">Developer</div>
-                <div>{(property as any).developer_name || "—"}</div>
-
-                {property.possession_year || (property as any).possession_date ? (
+                <div>{developer}</div>
+                {property.possession_year ? (
                   <div className="mt-3">
                     <div className="text-xs text-gray-500">Possession</div>
-                    <div className="font-medium">{property.possession_year || (property as any).possession_date}</div>
+                    <div className="font-medium">{property.possession_year}</div>
                   </div>
                 ) : null}
 
@@ -562,7 +565,7 @@ export default function PropertyDetailsPage() {
                     <div className="font-medium">
                       {property.rera_id ? property.rera_id : ""}
                       {property.rera_url ? (
-                        <a href={String(property.rera_url)} target="_blank" rel="noreferrer" className="ml-2 text-blue-600 underline">View</a>
+                        <a href={String(property.rera_url)} target="_blank" rel="noreferrer" className="ml-2 text-indigo-600 underline">View</a>
                       ) : null}
                     </div>
                   </div>
@@ -573,10 +576,10 @@ export default function PropertyDetailsPage() {
         </div>
 
         {/* Footer quick links */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="text-sm text-gray-500">Interested?</div>
+              <div className="text-sm text-gray-500">Ready to proceed?</div>
               <div className="text-lg font-semibold">{property.title || property.project_name}</div>
             </div>
             <div className="flex gap-3">
@@ -593,6 +596,7 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
