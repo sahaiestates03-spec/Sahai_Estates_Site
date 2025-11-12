@@ -3,7 +3,6 @@
 // Set either:
 //  - VITE_NEWLAUNCH_EXEC = "https://script.google.com/macros/s/XXXXX/exec"
 //  - or VITE_NEWLAUNCH_SHEET_CSV = "https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=..."
-//
 // Returns Project[] with normalized fields used by PropertyDetailsPage.
 
 export type Project = {
@@ -27,54 +26,13 @@ export type Project = {
 };
 
 const EXEC = (import.meta.env.VITE_NEWLAUNCH_EXEC || "").toString().trim();
+// prefer explicit typed env if you like: const CSV_URL = import.meta.env.VITE_NEWLAUNCH_SHEET_CSV as string;
 const CSV_URL = (import.meta.env.VITE_NEWLAUNCH_SHEET_CSV || "").toString().trim();
 const CACHE_MIN = Number(import.meta.env.VITE_SHEET_CACHE_MIN || 2);
 
 let cache: { at: number; data: Project[] } | null = null;
 
-/** simple CSV parser that handles quoted cells and commas inside quotes */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let curRow: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '"') {
-      if (inQuotes && text[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-    if (ch === "," && !inQuotes) {
-      curRow.push(cur);
-      cur = "";
-      continue;
-    }
-    if ((ch === "\n" || ch === "\r") && !inQuotes) {
-      curRow.push(cur);
-      rows.push(curRow);
-      curRow = [];
-      cur = "";
-      if (ch === "\r" && text[i + 1] === "\n") i++;
-      continue;
-    }
-    cur += ch;
-  }
-  // final
-  if (inQuotes) {
-    // malformed CSV — still push what we have
-  }
-  if (cur.length || curRow.length) {
-    curRow.push(cur);
-    rows.push(curRow);
-  }
-  return rows;
-}
-
+/** helper: normalize header names */
 function normalizeHeaders(hdrs: string[]) {
   return hdrs.map(h => (h || "").toString().trim().toLowerCase());
 }
@@ -162,6 +120,24 @@ function normalizeProject(raw: Record<string, any>): Project {
   };
 }
 
+/** simple CSV-to-array helper using regex to respect quoted commas */
+function parseCsvSimple(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return [];
+  const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+  return lines.slice(1).map(line => {
+    // split on commas that are not inside quotes
+    const cols = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      const raw = (cols[i] || "");
+      // remove surrounding quotes if present
+      obj[h] = raw.replace(/^"|"$/g, "").trim();
+    });
+    return obj;
+  });
+}
+
 /** main fetcher */
 export async function fetchNewLaunch(): Promise<Project[]> {
   const now = Date.now();
@@ -181,7 +157,6 @@ export async function fetchNewLaunch(): Promise<Project[]> {
           if (Array.isArray(json)) rawArray = json;
           else if (json && Array.isArray(json.data)) rawArray = json.data;
           else {
-            // fallback: if it's object but not array, try to use values property
             rawArray = [];
           }
         } catch (err) {
@@ -194,18 +169,14 @@ export async function fetchNewLaunch(): Promise<Project[]> {
       }
     }
 
-    // 2) If no JSON from exec, try CSV URL
+    // 2) If no JSON from exec, try CSV URL (simple parser)
     if ((!rawArray || !rawArray.length) && CSV_URL) {
       const res = await fetch(CSV_URL, { cache: "no-store" });
       if (!res.ok) throw new Error(`CSV fetch failed ${res.status}`);
       const txt = await res.text();
-      const rows = parseCsv(txt).filter(r => r.length > 0);
-      if (!rows.length) rawArray = [];
-      else {
-        const headers = normalizeHeaders(rows[0]);
-        const dataRows = rows.slice(1);
-        rawArray = dataRows.map(cols => rowToObj(headers, cols));
-      }
+      // Use the simpler CSV parser you provided which handles quoted commas via regex
+      const parsed = parseCsvSimple(txt);
+      rawArray = parsed;
     }
 
     // Map rawArray to Project[] using normalizer
