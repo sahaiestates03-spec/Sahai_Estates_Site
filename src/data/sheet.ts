@@ -386,61 +386,38 @@ async function fetchTextUrl(url: string) {
 
 /**
  * fetchSheet:
- * - If APPSCRIPT_EXEC is set, call that with ?sheet=New_Launch_Properties and parse JSON {result,data}
- * - Else use CSV export URL (sheet id + gid) and parse CSV
+ * - Prioritizes VITE_LISTINGS_SHEET_CSV environment variable (explicit listings CSV)
+ * - Falls back to resolveCsvUrl()/SHEET_RAW if explicit CSV not provided
+ * - Parses CSV into PropertyRow[] and caches results for CACHE_MIN minutes
  */
 export async function fetchSheet(): Promise<PropertyRow[]> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_MIN * 60_000) return cache.data;
 
-  // prefer Apps Script exec if configured and looks like a URL
+  const explicitCsv = (import.meta.env.VITE_LISTINGS_SHEET_CSV || "").toString().trim();
+  const urlToUse = explicitCsv || resolveCsvUrl();
+  if (!urlToUse) {
+    console.warn("⚠️ No sheet CSV configured (VITE_LISTINGS_SHEET_CSV or VITE_SHEET_ID).");
+    return [];
+  }
+
   try {
-    let rawRows: RawRow[] = [];
+    const resp = await fetch(urlToUse, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
 
-    if (APPSCRIPT_EXEC && /^https?:\/\//i.test(APPSCRIPT_EXEC)) {
-      // try apps script JSON endpoint
-      const url = `${APPSCRIPT_EXEC}?sheet=New_Launch_Properties`;
-      const txt = await fetchTextUrl(url);
-      try {
-        const json = JSON.parse(txt);
-        // support both {result:"ok", data:[...]} or plain array
-        const arr = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-        rawRows = arr.map((x: any) => {
-          // normalize keys to lowercase so parseCSV-like logic works
-          const out: RawRow = {};
-          Object.keys(x || {}).forEach(k => { out[String(k).toLowerCase()] = (x[k] ?? "").toString(); });
-          return out;
-        });
-      } catch (err) {
-        console.warn("APPSCRIPT returned non-json or unexpected shape; falling back to CSV. raw:", txt);
-        rawRows = [];
-      }
-    }
+    const rows = parseCSV(text)
+      .map(mapRow)
+      .filter((x): x is PropertyRow => !!x)
+      .filter(p => {
+        const s = (p.status || "").toLowerCase();
+        return !["rented", "sold", "inactive"].includes(s);
+      });
 
-    if (!rawRows.length) {
-      const url = resolveCsvUrl();
-      if (!url) {
-        console.warn("No VITE_SHEET_ID or APPSCRIPT_EXEC configured.");
-        cache = { at: Date.now(), data: [] };
-        return [];
-      }
-      const txt = await ( /^https?:\/\//i.test(SHEET_RAW) ? fetchTextUrl(url) : fetchTextUrl(csvUrlFromId(SHEET_RAW, SHEET_GID)) );
-      rawRows = parseCSV(txt);
-    }
-
-    const rows = rawRows.map(mapRow).filter((x): x is PropertyRow => !!x);
-
-    // filter out sold/rented/inactive - keep only active launches etc.
-    const filtered = rows.filter(r => {
-      const s = (r.status || "").toString().toLowerCase();
-      return !["rented", "sold", "inactive"].includes(s);
-    });
-
-    cache = { at: Date.now(), data: filtered };
-    return filtered;
+    cache = { at: Date.now(), data: rows };
+    return rows;
   } catch (err) {
-    console.warn("Failed to load sheet — returning empty array.", err);
-    cache = { at: Date.now(), data: [] };
+    console.warn("⚠️ Failed to load sheet — using fallback.", err);
     return [];
   }
 }
