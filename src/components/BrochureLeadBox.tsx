@@ -12,32 +12,19 @@ type ProjectMini = {
 
 type Message = { type: "success" | "error"; text: string } | null;
 
-/**
- * Safe LEADS endpoint resolver:
- * - Uses Vite env var VITE_LEADS_ENDPOINT if present
- * - Falls back to the hardcoded Apps Script exec URL otherwise
- * - Wrapped in try/catch so build tools don't choke on environments without import.meta
- */
-const FALLBACK_LEADS =
-  "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
-
-const LEADS_ENDPOINT = (() => {
-  try {
-    // import.meta is replaced by Vite at build time; access it safely
-    const env = (import.meta as any)?.env;
-    const v = env && env.VITE_LEADS_ENDPOINT ? String(env.VITE_LEADS_ENDPOINT).trim() : "";
-    return v || FALLBACK_LEADS;
-  } catch (e) {
-    return FALLBACK_LEADS;
-  }
-})();
-
 export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+
+  // safe read of Vite env (use any to avoid TS errors during build)
+  const env = (typeof import !== "undefined" ? (import as any) : {}) as any;
+  const LEADS_ENDPOINT =
+    (env?.meta?.env?.VITE_LEADS_ENDPOINT as string) ||
+    (typeof (window as any).__VITE_LEADS_ENDPOINT === "string" ? (window as any).__VITE_LEADS_ENDPOINT : "") ||
+    "https://script.google.com/macros/s/AKfycbxyWsideQk_iuOM-GnOPxYGOSlBJ0-8cFGy5vzoMEgk2lc4z4To5IQOF_apXcWOg-dy3A/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
@@ -48,7 +35,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     return /^[6-9]\d{9}$/.test(m10) ? m10 : null;
   }
 
-  // safe open in new tab with noopener, noreferrer
   function openInNewTab(url?: string) {
     if (!url) return;
     try {
@@ -60,14 +46,10 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
       a.click();
       document.body.removeChild(a);
     } catch {
-      try {
-        window.open(url, "_blank");
-        if ((window as any).opener) (window as any).opener = null;
-      } catch {}
+      try { window.open(url, "_blank"); } catch {}
     }
   }
 
-  // quick brochure download (no form)
   async function onGetBrochureClick(proj: ProjectMini) {
     const payload = {
       project_id: proj.project_id || proj.slug || "",
@@ -109,7 +91,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
       return;
     }
 
-    // If mobile provided, validate & sanitize
     let mobileSan = "";
     if (mobile) {
       const m = validateMobile(mobile);
@@ -141,14 +122,11 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
       };
 
-      // submit via hidden-form helper (avoids CORS issues with Apps Script)
       await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
 
       setMessage({ type: "success", text: "Thanks — we'll contact you shortly." });
 
-      if (project?.brochure_url) {
-        openInNewTab(project.brochure_url);
-      }
+      if (project?.brochure_url) openInNewTab(project.brochure_url);
 
       setName("");
       setEmail("");
@@ -161,7 +139,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     }
   }
 
-  // quick submit attaches to quick lead flow (no form data required)
   const quickSubmit = () => onGetBrochureClick(project);
 
   return (
