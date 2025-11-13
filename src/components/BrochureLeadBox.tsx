@@ -19,11 +19,9 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
 
-  // safe read of Vite env (use any to avoid TS errors during build)
-  const env = (typeof import !== "undefined" ? (import as any) : {}) as any;
+  // Use import.meta.env safely (Vite)
   const LEADS_ENDPOINT =
-    (env?.meta?.env?.VITE_LEADS_ENDPOINT as string) ||
-    (typeof (window as any).__VITE_LEADS_ENDPOINT === "string" ? (window as any).__VITE_LEADS_ENDPOINT : "") ||
+    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_LEADS_ENDPOINT) ||
     "https://script.google.com/macros/s/AKfycbxyWsideQk_iuOM-GnOPxYGOSlBJ0-8cFGy5vzoMEgk2lc4z4To5IQOF_apXcWOg-dy3A/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
