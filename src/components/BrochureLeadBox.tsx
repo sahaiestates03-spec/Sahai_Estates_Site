@@ -22,6 +22,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const LEADS_ENDPOINT =
     (import.meta && (import.meta as any).env && (import.meta as any).env.VITE_LEADS_ENDPOINT) ||
     "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
+  const WEBHOOK = import.meta.env.VITE_LEADS_ENDPOINT;
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
