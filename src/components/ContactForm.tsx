@@ -124,6 +124,7 @@ export default function ContactForm() {
                 <div>
                   <h4 className="font-semibold text-navy-900 mb-1">Phone</h4>
                   <div className="space-y-1">
+                    <a href="tel:+919820056405" className="text-gray-600 hover:text-brand-600 block">+91 98200 56405</a>
                     <a href="tel:+919920214015" className="text-gray-600 hover:text-brand-600 block">+91 99202 14015</a>
                     <a href="tel:+912223522092" className="text-gray-600 hover:text-brand-600 block">+91 022 2352 2092</a>
                     <a href="tel:+912223513703" className="text-gray-600 hover:text-brand-600 block">+91 022 2351 3703</a>
