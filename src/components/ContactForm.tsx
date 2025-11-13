@@ -1,15 +1,9 @@
+// src/components/ContactForm.tsx
 import React, { useState } from "react";
 import { Phone, Mail, MapPin, Send, MessageCircle } from "lucide-react";
 import submitLeadHiddenForm from "../utils/submitLeadHiddenForm";
 
-/**
- * ContactForm.tsx
- * - Uses VITE_LEADS_ENDPOINT from env (Vite). If not set, falls back to a hardcoded exec.
- * - Submits via a hidden form + hidden iframe to avoid CORS with Apps Script.
- */
-
-const FALLBACK_EXEC = "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
-const LEADS_ENDPOINT = (import.meta as any)?.env?.VITE_LEADS_ENDPOINT?.toString().trim() || FALLBACK_EXEC;
+const LEADS_ENDPOINT = (import.meta as any)?.env?.VITE_LEADS_ENDPOINT || "https://script.google.com/macros/s/AKfycbxyWsideQk_iuOM-GnOPxYGOSlBJ0-8cFGy5vzoMEgk2lc4z4To5IQOF_apXcWOg-dy3A/exec";
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
@@ -36,18 +30,18 @@ export default function ContactForm() {
         mobile: formData.phone || "",
         source: "contact-page",
         brochure_url: "",
-        utm_source: new URLSearchParams(window.location.search).get("utm_source") || "",
-        utm_medium: new URLSearchParams(window.location.search).get("utm_medium") || "",
-        utm_campaign: new URLSearchParams(window.location.search).get("utm_campaign") || "",
-        referrer: typeof document !== "undefined" ? document.referrer || "" : "",
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
+        utm_source: "",
+        utm_medium: "",
+        utm_campaign: "",
+        referrer: document.referrer || "",
+        user_agent: navigator.userAgent || "",
         notes: formData.propertyRequirements || ""
       };
 
       const ENDPOINT = LEADS_ENDPOINT;
       if (!ENDPOINT) throw new Error("Leads endpoint not configured (VITE_LEADS_ENDPOINT).");
 
-      // create hidden iframe (reusable)
+      // submit via hidden form to avoid CORS with Apps Script
       const iframeName = "hidden-lead-iframe";
       let iframe = document.querySelector(`iframe[name="${iframeName}"]`) as HTMLIFrameElement | null;
       if (!iframe) {
@@ -57,7 +51,6 @@ export default function ContactForm() {
         document.body.appendChild(iframe);
       }
 
-      // build hidden form
       const form = document.createElement("form");
       form.method = "POST";
       form.action = ENDPOINT;
@@ -75,16 +68,13 @@ export default function ContactForm() {
       document.body.appendChild(form);
       form.submit();
 
-      // keep form for a short time then cleanup
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
+      setTimeout(() => setSubmitStatus("idle"), 3500);
+
       setTimeout(() => {
         try { document.body.removeChild(form); } catch {}
       }, 5000);
-
-      setSubmitStatus("success");
-      setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
-
-      // reset status after a while
-      setTimeout(() => setSubmitStatus("idle"), 3500);
     } catch (err) {
       console.error("Lead submit failed:", err);
       setSubmitStatus("error");
@@ -96,7 +86,7 @@ export default function ContactForm() {
 
   const handleWhatsApp = () => {
     const phoneNumber = "919920214015";
-    const message = encodeURIComponent("Hi, I am interested in luxury properties in South Mumbai.");
+    const message = encodeURIComponent("Hi, I am interested in learning more about your luxury properties in South Mumbai.");
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
   };
 
@@ -116,7 +106,7 @@ export default function ContactForm() {
           <div>
             <h3 className="text-2xl font-bold text-navy-900 mb-6">Contact Information</h3>
             <div className="space-y-6 mb-8">
-              {/* Phone card */}
+              {/* Phone/Email/Office blocks */}
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Phone className="text-brand-600" size={24} />
@@ -124,7 +114,6 @@ export default function ContactForm() {
                 <div>
                   <h4 className="font-semibold text-navy-900 mb-1">Phone</h4>
                   <div className="space-y-1">
-                    <a href="tel:+919820056405" className="text-gray-600 hover:text-brand-600 block">+91 98200 56405</a>
                     <a href="tel:+919920214015" className="text-gray-600 hover:text-brand-600 block">+91 99202 14015</a>
                     <a href="tel:+912223522092" className="text-gray-600 hover:text-brand-600 block">+91 022 2352 2092</a>
                     <a href="tel:+912223513703" className="text-gray-600 hover:text-brand-600 block">+91 022 2351 3703</a>
@@ -133,7 +122,6 @@ export default function ContactForm() {
                 </div>
               </div>
 
-              {/* Email card */}
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Mail className="text-brand-600" size={24} />
@@ -148,7 +136,6 @@ export default function ContactForm() {
                 </div>
               </div>
 
-              {/* Office card */}
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <MapPin className="text-brand-600" size={24} />
