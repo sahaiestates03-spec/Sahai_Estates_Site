@@ -1,3 +1,4 @@
+// src/components/BrochureLeadBox.tsx
 import React, { useState } from "react";
 import { getUtm } from "../utils/getUtm";
 import submitLeadHiddenForm from "../utils/submitLeadHiddenForm";
@@ -11,20 +12,32 @@ type ProjectMini = {
 
 type Message = { type: "success" | "error"; text: string } | null;
 
+/**
+ * Safe LEADS endpoint resolver:
+ * - Uses Vite env var VITE_LEADS_ENDPOINT if present
+ * - Falls back to the hardcoded Apps Script exec URL otherwise
+ * - Wrapped in try/catch so build tools don't choke on environments without import.meta
+ */
+const FALLBACK_LEADS =
+  "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
+
+const LEADS_ENDPOINT = (() => {
+  try {
+    // import.meta is replaced by Vite at build time; access it safely
+    const env = (import.meta as any)?.env;
+    const v = env && env.VITE_LEADS_ENDPOINT ? String(env.VITE_LEADS_ENDPOINT).trim() : "";
+    return v || FALLBACK_LEADS;
+  } catch (e) {
+    return FALLBACK_LEADS;
+  }
+})();
+
 export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
-
-  // Use Vite env var (safe check so it won't throw in non-built environments)
-  const LEADS_ENDPOINT =
-    (typeof import !== "undefined" &&
-      typeof (import as any).meta !== "undefined" &&
-      (import as any).meta.env?.VITE_LEADS_ENDPOINT) ||
-    // Optional fallback (only used if env not set) — replace with your exec if you want
-    "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
@@ -35,6 +48,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     return /^[6-9]\d{9}$/.test(m10) ? m10 : null;
   }
 
+  // safe open in new tab with noopener, noreferrer
   function openInNewTab(url?: string) {
     if (!url) return;
     try {
@@ -53,6 +67,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     }
   }
 
+  // quick brochure download (no form)
   async function onGetBrochureClick(proj: ProjectMini) {
     const payload = {
       project_id: proj.project_id || proj.slug || "",
@@ -94,6 +109,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
       return;
     }
 
+    // If mobile provided, validate & sanitize
     let mobileSan = "";
     if (mobile) {
       const m = validateMobile(mobile);
@@ -125,6 +141,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
       };
 
+      // submit via hidden-form helper (avoids CORS issues with Apps Script)
       await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
 
       setMessage({ type: "success", text: "Thanks — we'll contact you shortly." });
@@ -144,6 +161,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     }
   }
 
+  // quick submit attaches to quick lead flow (no form data required)
   const quickSubmit = () => onGetBrochureClick(project);
 
   return (
