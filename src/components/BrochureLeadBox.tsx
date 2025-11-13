@@ -18,17 +18,39 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
 
-  // single source of truth for endpoint
+  // endpoint (Vite exposes import.meta.env)
   const LEADS_ENDPOINT =
-    (import.meta && (import.meta as any).env && (import.meta as any).env.VITE_LEADS_ENDPOINT) ||
+    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_LEADS_ENDPOINT) ||
     "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
-  const WEBHOOK = import.meta.env.VITE_LEADS_ENDPOINT;
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
 
-  function validateMobile(m: string) {
-    const m10 = sanitizeMobile(m).slice(-10);
+  function validateMobile(s: string) {
+    const digits = sanitizeMobile(s);
+    if (digits.length < 10) return null;
+    const m10 = digits.slice(-10);
     return /^[6-9]\d{9}$/.test(m10) ? m10 : null;
+  }
+
+  // safe open in new tab with noopener, noreferrer
+  function openInNewTab(url?: string) {
+    if (!url) return;
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      // append to DOM to ensure click works in some environments
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      try {
+        // fallback
+        window.open(url, "_blank");
+        if ((window as any).opener) (window as any).opener = null;
+      } catch {}
+    }
   }
 
   // Called when user clicks a "Get Brochure" CTA that doesn't need a form (quick lead)
@@ -50,17 +72,17 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
       notes: "",
     };
 
+    setLoading(true);
+    setMessage(null);
     try {
       await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
-
-      // immediate UX: open brochure if available and show message
-      if (proj.brochure_url) {
-        try { window.open(proj.brochure_url, "_blank"); } catch {}
-      }
+      if (proj.brochure_url) openInNewTab(proj.brochure_url);
       setMessage({ type: "success", text: "Saved. We'll WhatsApp the brochure shortly." });
     } catch (err) {
       console.error("Brochure lead submit failed", err);
       setMessage({ type: "error", text: "Could not save lead. Please try again." });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -105,34 +127,28 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
       };
 
-      // IMPORTANT: use hidden-form helper to avoid CORS with Apps Script
+      // submit via hidden-form helper (avoids CORS issues with Apps Script)
       await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
 
-      // success UX
       setMessage({ type: "success", text: "Thanks — we'll contact you shortly." });
 
-      // open brochure if present immediately (server cannot provide a redirect payload back to us)
       if (project?.brochure_url) {
-        try {
-          window.open(project.brochure_url, "_blank");
-        } catch {}
+        openInNewTab(project.brochure_url);
       }
 
-      // clear fields
       setName("");
       setEmail("");
       setMobile("");
     } catch (err) {
       console.error("BrochureLeadBox error:", err);
-      // friendly fallback — leads may still have been saved server-side but show error
       setMessage({ type: "error", text: "Could not save lead. Please try again." });
     } finally {
       setLoading(false);
     }
   }
 
-  // quick submit helper for small CTA buttons
-  const quickSubmit = () => handleSubmit();
+  // quick submit attaches to quick lead flow (no form data required)
+  const quickSubmit = () => onGetBrochureClick(project);
 
   return (
     <div className="bg-white rounded-2xl shadow p-6">
@@ -145,6 +161,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
+          aria-label="Full name"
         />
 
         <input
@@ -153,6 +170,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          aria-label="Email"
         />
 
         <input
@@ -166,6 +184,7 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
             setMobile(digits);
             if (message && message.type === "error") setMessage(null);
           }}
+          aria-label="Mobile number"
         />
 
         <div className="flex items-center gap-2">
@@ -173,18 +192,25 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
             type="submit"
             disabled={loading}
             className="flex-1 px-4 py-2 rounded bg-black text-white font-semibold disabled:opacity-50"
+            aria-disabled={loading}
           >
             {loading ? "Sending..." : "Download Brochure"}
           </button>
 
-          <button type="button" onClick={quickSubmit} className="px-3 py-2 rounded border" disabled={loading}>
+          <button
+            type="button"
+            onClick={quickSubmit}
+            className="px-3 py-2 rounded border"
+            disabled={loading}
+            aria-disabled={loading}
+          >
             Quick
           </button>
         </div>
       </form>
 
       {message ? (
-        <div className={`mt-3 text-sm ${message.type === "success" ? "text-green-600" : "text-red-600"}`}>
+        <div className={`mt-3 text-sm ${message.type === "success" ? "text-green-600" : "text-red-600"}`} aria-live="polite">
           {message.text}
         </div>
       ) : null}
