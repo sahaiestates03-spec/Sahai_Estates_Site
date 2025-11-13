@@ -466,6 +466,7 @@ export default function PropertyDetailsPage() {
   const metaTitle = (property as any).meta_title || "";
   const metaDescription = (property as any).meta_description || "";
   const developerName = (property as any).developer_name || "—";
+  const developerName = getDeveloperName(property as any);
   const addressLine = getAddressLine(property as any);
   const reraId = (property as any).rera_id || "—";
   const reraUrl = (property as any).rera_url || "";
