@@ -18,9 +18,12 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
 
-  // endpoint (Vite exposes import.meta.env)
+  // Use Vite env var (safe check so it won't throw in non-built environments)
   const LEADS_ENDPOINT =
-    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_LEADS_ENDPOINT) ||
+    (typeof import !== "undefined" &&
+      typeof (import as any).meta !== "undefined" &&
+      (import as any).meta.env?.VITE_LEADS_ENDPOINT) ||
+    // Optional fallback (only used if env not set) — replace with your exec if you want
     "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
 
   const sanitizeMobile = (s: string) => (s || "").replace(/\D/g, "");
@@ -32,7 +35,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     return /^[6-9]\d{9}$/.test(m10) ? m10 : null;
   }
 
-  // safe open in new tab with noopener, noreferrer
   function openInNewTab(url?: string) {
     if (!url) return;
     try {
@@ -40,20 +42,17 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
       a.href = url;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
-      // append to DOM to ensure click works in some environments
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     } catch {
       try {
-        // fallback
         window.open(url, "_blank");
         if ((window as any).opener) (window as any).opener = null;
       } catch {}
     }
   }
 
-  // Called when user clicks a "Get Brochure" CTA that doesn't need a form (quick lead)
   async function onGetBrochureClick(proj: ProjectMini) {
     const payload = {
       project_id: proj.project_id || proj.slug || "",
@@ -95,7 +94,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
       return;
     }
 
-    // If mobile provided, validate & sanitize
     let mobileSan = "";
     if (mobile) {
       const m = validateMobile(mobile);
@@ -127,7 +125,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
       };
 
-      // submit via hidden-form helper (avoids CORS issues with Apps Script)
       await submitLeadHiddenForm(LEADS_ENDPOINT, payload);
 
       setMessage({ type: "success", text: "Thanks — we'll contact you shortly." });
@@ -147,7 +144,6 @@ export default function BrochureLeadBox({ project }: { project: ProjectMini }) {
     }
   }
 
-  // quick submit attaches to quick lead flow (no form data required)
   const quickSubmit = () => onGetBrochureClick(project);
 
   return (
