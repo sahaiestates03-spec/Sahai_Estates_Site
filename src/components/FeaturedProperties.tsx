@@ -6,7 +6,7 @@ import PropertyCard from "./PropertyCard";
 function parseBool(v: unknown) {
   if (typeof v === "boolean") return v;
   const s = String(v ?? "").trim().toLowerCase();
-  return s === "true" || s === "yes" || s === "1";
+  return ["true", "yes", "1", "y"].includes(s);
 }
 
 // If PropertyCard expects a different shape than PropertyRow,
@@ -28,7 +28,7 @@ export default function FeaturedProperties() {
         if (!alive) return;
         setRows(Array.isArray(data) ? data : []);
       } catch (e: any) {
-        setError(e?.message || "Failed to load properties.");
+        if (alive) setError(e?.message || "Failed to load properties.");
       } finally {
         if (alive) setLoading(false);
       }
@@ -40,7 +40,7 @@ export default function FeaturedProperties() {
 
   const featured = useMemo(() => {
     // Filter by sheet column "isFeatured" (TRUE/Yes/1 etc.)
-    const flagged = rows.filter(r => parseBool((r as any).isFeatured));
+    const flagged = rows.filter(r => parseBool((r as any).isFeatured ?? (r as any).featured));
     const list = flagged.length ? flagged : rows; // fallback if none flagged
     return list.slice(0, 6);
   }, [rows]);
