@@ -10,26 +10,26 @@ interface PropertyCardProps {
 
 /** Decide a safe cover image from images/cover/image + folder shorthand */
 function expandCover(prop: AnyProp): string {
-  const raw = prop?.images;
+  const raw = prop?.images ?? prop?.gallery_image_urls ?? prop?.gallery ?? prop?.hero_image_url;
 
   // 1) Array of images -> first item
   if (Array.isArray(raw) && raw.length) {
-    const first = String(raw[0]);
-    return (first.startsWith("http") || first.startsWith("/"))
-      ? first
-      : `/prop-pics/${first.replace(/^\/+/, "")}`;
+    const first = String(raw[0] ?? "").trim();
+    if (!first) return "/placeholder.jpg";
+    return first.startsWith("http") || first.startsWith("/") ? first : `/prop-pics/${first.replace(/^\/+/, "")}`;
   }
 
-  // 2) Single string in "images" (or use "cover"/"image")
+  // 2) Single string in "images" (or use "cover"/"image"/"hero_image_url")
   let s: string | undefined =
     (typeof raw === "string" && raw.trim()) ||
+    (typeof prop?.hero_image_url === "string" && prop.hero_image_url.trim()) ||
     (typeof prop?.cover === "string" && prop.cover.trim()) ||
     (typeof prop?.image === "string" && prop.image.trim());
 
   if (!s) return "/placeholder.jpg";
 
   // Folder shorthand: "FOLDER::segment/slug/*" or "segment/slug/*" or "segment/slug"
-  if (s.startsWith("FOLDER::")) {
+  if (s.toUpperCase().startsWith("FOLDER::")) {
     const folder = s.replace(/^FOLDER::/i, "").replace(/\/?\*$/, "");
     return `/prop-pics/${folder}/1.jpg`;
   }
@@ -93,11 +93,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     : undefined;
 
   const listingForRaw =
-    property.listingFor ??
-    property.status ??
-    property.for ??
-    property.listingType ??
-    property.saleType;
+    property.listingFor ?? property.status ?? property.for ?? property.listingType ?? property.saleType;
 
   const listingFor: string | undefined = listingForRaw
     ? String(listingForRaw).toLowerCase()
@@ -144,6 +140,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
           decoding="async"
+          onError={(e) => {
+            const t = e.currentTarget;
+            if (!t.dataset.fallback) {
+              t.src = "/placeholder.jpg";
+              t.dataset.fallback = "1";
+            }
+          }}
         />
 
         {/* Featured */}
