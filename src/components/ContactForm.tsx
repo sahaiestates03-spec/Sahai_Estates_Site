@@ -1,16 +1,15 @@
-// src/components/ContactForm.tsx
 import React, { useState } from "react";
 import { Phone, Mail, MapPin, Send, MessageCircle } from "lucide-react";
 import submitLeadHiddenForm from "../utils/submitLeadHiddenForm";
 
 /**
- * NOTE:
- * - Put the Apps Script exec URL in Vite env var VITE_LEADS_ENDPOINT or it will fall back
- *   to the hardcoded string set below (your Apps Script exec URL).
+ * ContactForm.tsx
+ * - Uses VITE_LEADS_ENDPOINT from env (Vite). If not set, falls back to a hardcoded exec.
+ * - Submits via a hidden form + hidden iframe to avoid CORS with Apps Script.
  */
-const LEADS_ENDPOINT =
-  import.meta.env?.VITE_LEADS_ENDPOINT ||
-  "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
+
+const FALLBACK_EXEC = "https://script.google.com/macros/s/AKfycbwSxgTY6RjhwkCL6WSZT1PdJQB6U6QHGoQE0s9XF7kJtKeLeMHHzla5XRYBXOf7X-2j8g/exec";
+const LEADS_ENDPOINT = (import.meta as any)?.env?.VITE_LEADS_ENDPOINT?.toString().trim() || FALLBACK_EXEC;
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
@@ -23,96 +22,81 @@ export default function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
 
-  // inside ContactForm.tsx - replace the handleSubmit function with this
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  // lock UI
-  setIsSubmitting(true);
+    try {
+      const data = {
+        project_id: "CONTACT-FORM",
+        project_name: "Contact Page",
+        slug: "contact-form",
+        name: formData.name || "",
+        email: formData.email || "",
+        mobile: formData.phone || "",
+        source: "contact-page",
+        brochure_url: "",
+        utm_source: new URLSearchParams(window.location.search).get("utm_source") || "",
+        utm_medium: new URLSearchParams(window.location.search).get("utm_medium") || "",
+        utm_campaign: new URLSearchParams(window.location.search).get("utm_campaign") || "",
+        referrer: typeof document !== "undefined" ? document.referrer || "" : "",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : "",
+        notes: formData.propertyRequirements || ""
+      };
 
-  try {
-    // build data object
-    const data = {
-      project_id: "CONTACT-FORM",
-      project_name: "Contact Page",
-      slug: "contact-form",
-      name: formData.name || "",
-      email: formData.email || "",
-      mobile: formData.phone || "",
-      source: "contact-page",
-      brochure_url: "",
-      utm_source: "",
-      utm_medium: "",
-      utm_campaign: "",
-      referrer: document.referrer || "",
-      user_agent: navigator.userAgent || "",
-      notes: formData.propertyRequirements || ""
-    };
+      const ENDPOINT = LEADS_ENDPOINT;
+      if (!ENDPOINT) throw new Error("Leads endpoint not configured (VITE_LEADS_ENDPOINT).");
 
-    // endpoint from env
-    const ENDPOINT = (import.meta.env.VITE_LEADS_ENDPOINT || "").toString().trim();
-    if (!ENDPOINT) {
-      throw new Error("Leads endpoint not configured (VITE_LEADS_ENDPOINT).");
+      // create hidden iframe (reusable)
+      const iframeName = "hidden-lead-iframe";
+      let iframe = document.querySelector(`iframe[name="${iframeName}"]`) as HTMLIFrameElement | null;
+      if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.name = iframeName;
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+      }
+
+      // build hidden form
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = ENDPOINT;
+      form.target = iframeName;
+      form.enctype = "application/x-www-form-urlencoded";
+
+      Object.keys(data).forEach((k) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = k;
+        input.value = (data as any)[k] != null ? String((data as any)[k]) : "";
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // keep form for a short time then cleanup
+      setTimeout(() => {
+        try { document.body.removeChild(form); } catch {}
+      }, 5000);
+
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
+
+      // reset status after a while
+      setTimeout(() => setSubmitStatus("idle"), 3500);
+    } catch (err) {
+      console.error("Lead submit failed:", err);
+      setSubmitStatus("error");
+      setTimeout(() => setSubmitStatus("idle"), 3500);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Create hidden iframe (name)
-    const iframeName = "hidden-lead-iframe";
-    let iframe = document.querySelector(`iframe[name="${iframeName}"]`) as HTMLIFrameElement | null;
-    if (!iframe) {
-      iframe = document.createElement("iframe");
-      iframe.name = iframeName;
-      iframe.style.display = "none";
-      document.body.appendChild(iframe);
-    }
-
-    // Create hidden form pointed to endpoint
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = ENDPOINT;
-    form.target = iframeName;
-    form.enctype = "application/x-www-form-urlencoded";
-
-    // Add hidden inputs for each key
-    Object.keys(data).forEach((k) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = k;
-      // ensure string value
-      input.value = (data as any)[k] != null ? String((data as any)[k]) : "";
-      form.appendChild(input);
-    });
-
-    // add the form to document and submit
-    document.body.appendChild(form);
-    form.submit();
-
-    console.log("Submitted hidden form test. Wait a few seconds for sheet to update.");
-
-    // cleanup after a few seconds
-    setTimeout(() => {
-      try { document.body.removeChild(form); } catch (e) {}
-      // do NOT remove iframe because other parts may reuse it
-    }, 5000);
-
-    // show success to user
-    setSubmitStatus("success");
-    setFormData({ name: "", email: "", phone: "", propertyRequirements: "" });
-
-    // after few seconds reset status
-    setTimeout(() => setSubmitStatus("idle"), 3500);
-  } catch (err) {
-    console.error("Lead submit failed:", err);
-    setSubmitStatus("error");
-    setTimeout(() => setSubmitStatus("idle"), 3500);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
+  };
 
   const handleWhatsApp = () => {
     const phoneNumber = "919920214015";
-    const message = encodeURIComponent("Hi, I am interested in learning more about your luxury properties in South Mumbai.");
+    const message = encodeURIComponent("Hi, I am interested in luxury properties in South Mumbai.");
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
   };
 
@@ -132,6 +116,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           <div>
             <h3 className="text-2xl font-bold text-navy-900 mb-6">Contact Information</h3>
             <div className="space-y-6 mb-8">
+              {/* Phone card */}
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Phone className="text-brand-600" size={24} />
@@ -147,6 +132,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </div>
 
+              {/* Email card */}
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Mail className="text-brand-600" size={24} />
@@ -161,6 +147,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </div>
 
+              {/* Office card */}
               <div className="flex items-start gap-4 p-4 bg-white rounded-lg">
                 <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <MapPin className="text-brand-600" size={24} />
