@@ -1,5 +1,10 @@
-// src/components/LeadCaptureForm.tsx
 import { useState } from "react";
+
+/**
+ * LeadCaptureForm.tsx
+ * - Small lightweight lead capture used on property pages / new launch pages.
+ * - Uses VITE_LEADS_ENDPOINT if set, otherwise uses a fallback exec URL.
+ */
 
 type Props = {
   projectName: string;
@@ -9,11 +14,12 @@ type Props = {
   onDone?: () => void;
 };
 
+const FALLBACK_EXEC = "https://script.google.com/macros/s/AKfycbxyWsideQk_iuOM-GnOPxYGOSlBJ0-8cFGy5vzoMEgk2lc4z4To5IQOF_apXcWOg-dy3A/exec";
+const WEBHOOK = (import.meta as any)?.env?.VITE_LEADS_ENDPOINT?.toString().trim() || FALLBACK_EXEC;
+
 export default function LeadCaptureForm({ projectName, projectId = "", slug = "", brochureUrl = "", onDone }: Props) {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [status, setStatus] = useState<"idle"|"sending"|"done">("idle");
-
-  const WEBHOOK = "https://script.google.com/macros/s/AKfycbxyWsideQk_iuOM-GnOPxYGOSlBJ0-8cFGy5vzoMEgk2lc4z4To5IQOF_apXcWOg-dy3A/exec";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +32,14 @@ export default function LeadCaptureForm({ projectName, projectId = "", slug = ""
         slug: slug || "",
         name: form.name || "",
         email: form.email || "",
-        phone: form.phone || "",
+        mobile: form.phone || "",
         source: "New Launch Page",
-        brochure: brochureUrl || "",
+        brochure_url: brochureUrl || "",
         utm_source: new URLSearchParams(window.location.search).get("utm_source") || "",
         utm_medium: new URLSearchParams(window.location.search).get("utm_medium") || "",
         utm_campaign: new URLSearchParams(window.location.search).get("utm_campaign") || "",
-        referrer: document.referrer || "",
-        user_agent: navigator.userAgent || ""
+        referrer: typeof document !== "undefined" ? document.referrer || "" : "",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent || "" : ""
       };
 
       const body = new URLSearchParams(payload).toString();
@@ -44,12 +50,17 @@ export default function LeadCaptureForm({ projectName, projectId = "", slug = ""
         body
       });
 
-      // Apps Script returns JSON; read it
-      const json = await res.json();
-      if (json?.result !== "success") throw new Error(json?.message || "Server error");
+      // Apps Script typically returns JSON; read and check
+      let json: any = null;
+      try { json = await res.json(); } catch {}
+      // Many scripts return { result: "ok" } or { result: "success" }
+      const ok = (json && (json.result === "ok" || json.result === "success")) || res.ok;
+      if (!ok) throw new Error(json?.message || "Submission failed");
 
       setStatus("done");
-      if (brochureUrl) window.open(brochureUrl, "_blank");
+      if (brochureUrl) {
+        window.open(brochureUrl, "_blank");
+      }
       if (onDone) onDone();
     } catch (err) {
       console.error(err);
