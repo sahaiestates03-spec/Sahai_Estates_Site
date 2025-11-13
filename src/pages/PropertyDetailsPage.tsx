@@ -50,7 +50,7 @@ function buildImageCandidates(p: PropertyRow): string[] {
     if (out.indexOf(final) === -1) out.push(final);
   };
 
-  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery;
+  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery || (p as any).hero_image_url;
   const seg = (p as any).segment ? String((p as any).segment).toLowerCase() : "";
   const slug = (p as any).slug ? String((p as any).slug).toLowerCase() : sluggify((p as any).id || (p as any).title);
   const folderGuesses: string[] = [];
@@ -270,10 +270,7 @@ export default function PropertyDetailsPage() {
         });
 
         // 4) map sheetArray rows into PropertyRow if sheetArray actually holds property objects already
-        // If sheetArray are already in PropertyRow shape (from previous processing), keep them as-is.
-        // Otherwise if sheetArray are raw sheet rows (from your sheet) attempt to map minimally:
         const normalizedSheetRows: PropertyRow[] = sheetArray.map((p: any) => {
-          // If the sheet row already looks like a PropertyRow (has slug/title), keep as-is
           if (p && (p.slug || p.project_id || p.project_name || p.title)) {
             const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
             return {
@@ -345,7 +342,6 @@ export default function PropertyDetailsPage() {
               areaSqft: (p.carpet_min_sqft || p.carpet_max_sqft) ? ((p.carpet_min_sqft||"") + " - " + (p.carpet_max_sqft||"") + " sqft") : undefined,
             } as PropertyRow;
           }
-          // fallback blank
           return {} as PropertyRow;
         });
 
@@ -354,7 +350,7 @@ export default function PropertyDetailsPage() {
         if (alive) setRows(finalRows);
       } catch (err) {
         console.error("Error in property fetch flow:", err);
-        if (alive) setRows([]); // ensure rows is at least an array
+        if (alive) setRows([]);
       } finally {
         if (alive) setLoading(false);
       }
@@ -381,7 +377,11 @@ export default function PropertyDetailsPage() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!property) return;
+      if (!property) {
+        setImages([]);
+        setImgLoading(false);
+        return;
+      }
       setImgLoading(true);
       const candidates = buildImageCandidates(property);
       const valid = await preloadImages(candidates);
@@ -431,10 +431,8 @@ export default function PropertyDetailsPage() {
     const list: string[] = [];
     fields.forEach((f) => {
       if (!f) return;
-      // if comma-separated in a field, split and add individually
       String(f).split(/[,;]+/).map(x => x.trim()).forEach(x => { if (x) list.push(x); });
     });
-    // unique and join
     return Array.from(new Set(list)).join(", ");
   };
 
@@ -457,6 +455,12 @@ export default function PropertyDetailsPage() {
       </div>
     );
   }
+
+  // decide if this is new-launch / under-construction (show dev/architect/contractor only then)
+  const isNewLaunch =
+    Boolean(property.listingFor && String(property.listingFor).toLowerCase().includes("under")) ||
+    Boolean((property as any).new_launch) ||
+    Boolean((property as any).for && String((property as any).for).toLowerCase().includes("under"));
 
   // overview values
   const metaTitle = (property as any).meta_title || "";
@@ -504,9 +508,11 @@ export default function PropertyDetailsPage() {
                   <MapPin size={16} /> <span>{property.location}</span>
                 </p>
               ) : null}
-              <div className="ml-2 inline-flex items-center px-3 py-1 rounded-full bg-white text-sm text-gray-700 shadow-sm border">
-                <span className="font-medium">{developerName}</span>
-              </div>
+              {isNewLaunch ? (
+                <div className="ml-2 inline-flex items-center px-3 py-1 rounded-full bg-white text-sm text-gray-700 shadow-sm border">
+                  <span className="font-medium">{developerName}</span>
+                </div>
+              ) : null}
               {property.listingFor ? (
                 <div className="inline-flex items-center px-3 py-1 rounded bg-gradient-to-r from-indigo-600 to-indigo-400 text-white text-sm font-medium shadow">
                   {(property.listingFor || "").toString().replace("-", " ")}
@@ -548,7 +554,7 @@ export default function PropertyDetailsPage() {
                 <div>
                   <div className="h-96 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={ (property as any).hero_image_url || (images.length ? images[0] : "/prop-pics/default-hero.jpg") }
+                      src={ (property as any).hero_image_url || (images.length ? images[index] : "/prop-pics/default-hero.jpg") }
                       alt={(property.title || "Property") + " - " + (index + 1)}
                       className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                     />
@@ -597,7 +603,9 @@ export default function PropertyDetailsPage() {
               {/* Important details grid */}
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                 <div className="space-y-2">
-                  <div className="flex justify-between"><div className="text-gray-500">Developer</div><div className="font-medium">{developerName}</div></div>
+                  {isNewLaunch ? (
+                    <div className="flex justify-between"><div className="text-gray-500">Developer</div><div className="font-medium">{developerName}</div></div>
+                  ) : null}
                   <div className="flex justify-between"><div className="text-gray-500">Address</div><div className="font-medium">{addressLine || "—"}</div></div>
                   <div className="flex justify-between"><div className="text-gray-500">PIN / City</div><div className="font-medium">{(property as any).pincode || "—"}{(property as any).city ? (" • " + (property as any).city) : ""}</div></div>
                   <div className="flex justify-between"><div className="text-gray-500">RERA</div>
@@ -624,16 +632,18 @@ export default function PropertyDetailsPage() {
               </div>
 
               {/* Architect / Contractor / Amenities */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                <div>
-                  <div className="text-gray-500">Architect</div>
-                  <div className="font-medium mt-1">{architect}</div>
+              {isNewLaunch ? (
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                  <div>
+                    <div className="text-gray-500">Architect</div>
+                    <div className="font-medium mt-1">{architect}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Contractor</div>
+                    <div className="font-medium mt-1">{contractor}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Contractor</div>
-                  <div className="font-medium mt-1">{contractor}</div>
-                </div>
-              </div>
+              ) : null}
 
               <div className="mt-4">
                 <div className="text-gray-500 text-sm">Amenities & Facilities</div>
