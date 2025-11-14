@@ -401,7 +401,7 @@ export default function PropertyDetailsPage() {
     );
   }, [rows, key, slug]);
 
-  const property = propFromState || propFromSheet || null;
+  const property = (propFromSheet && Object.keys(propFromSheet).length > 3) ? propFromSheet : propFromState || propFromSheet || null;
 
   // DEBUG LOGS - safe placement (after 'property' and 'rows' exist)
   useEffect(() => {
