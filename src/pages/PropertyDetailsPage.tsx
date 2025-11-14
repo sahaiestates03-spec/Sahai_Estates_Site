@@ -132,6 +132,14 @@ export default function PropertyDetailsPage() {
   const location = useLocation() as { state?: { property?: PropertyRow } };
 
   const propFromState = location?.state?.property ?? null;
+// DEBUG LOGS - remove after debugging
+useEffect(() => {
+  console.log("PropertyDetailsPage: propFromState:", !!propFromState);
+  console.log("PropertyDetailsPage: propFromSheet found:", !!propFromSheet);
+  console.log("PropertyDetailsPage: final property object:", property);
+  console.log("PropertyDetailsPage: rows length:", rows.length);
+  if (rows.length) console.log("First row keys:", Object.keys(rows[0]).slice(0,50));
+}, [propFromState, propFromSheet, property, rows]);
 
   const [rows, setRows] = useState<PropertyRow[]>([]);
   const [loading, setLoading] = useState<boolean>(!propFromState);
