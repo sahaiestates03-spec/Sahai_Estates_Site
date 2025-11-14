@@ -50,7 +50,7 @@ function buildImageCandidates(p: PropertyRow): string[] {
     if (out.indexOf(final) === -1) out.push(final);
   };
 
-  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery || (p as any).hero_image_url;
+  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery || (p as any).hero_image_url || (p as any).image || (p as any).image_urls || (p as any).gallery_images || (p as any).gallery_urls;
   const seg = (p as any).segment ? String((p as any).segment).toLowerCase() : "";
   const slug = (p as any).slug ? String((p as any).slug).toLowerCase() : sluggify((p as any).id || (p as any).title);
   const folderGuesses: string[] = [];
@@ -132,14 +132,6 @@ export default function PropertyDetailsPage() {
   const location = useLocation() as { state?: { property?: PropertyRow } };
 
   const propFromState = location?.state?.property ?? null;
-// DEBUG LOGS - remove after debugging
-useEffect(() => {
-  console.log("PropertyDetailsPage: propFromState:", !!propFromState);
-  console.log("PropertyDetailsPage: propFromSheet found:", !!propFromSheet);
-  console.log("PropertyDetailsPage: final property object:", property);
-  console.log("PropertyDetailsPage: rows length:", rows.length);
-  if (rows.length) console.log("First row keys:", Object.keys(rows[0]).slice(0,50));
-}, [propFromState, propFromSheet, property, rows]);
 
   const [rows, setRows] = useState<PropertyRow[]>([]);
   const [loading, setLoading] = useState<boolean>(!propFromState);
@@ -227,27 +219,25 @@ useEffect(() => {
             for: "under-construction",
             segment: (p.segment || "residential").toString().toLowerCase(),
             status: p.status || undefined,
-            // images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
-images:
-  p.gallery_image_urls ||
-  p.gallery ||
-  p.images ||
-  p.image ||
-  p.image_urls ||
-  p.gallery_images ||
-  p.gallery_urls ||
-  p.galleryImages ||
-  (p.project_images ? p.project_images : undefined) ||
-  "FOLDER::" + slugValue + "/*",
-
-// description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
-description:
-  p.description ||
-  p.meta_description ||
-  p.project_description ||
-  p.summary ||
-  ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
-
+            // flexible images fallback
+            images:
+              p.gallery_image_urls ||
+              p.gallery ||
+              p.images ||
+              p.image ||
+              p.image_urls ||
+              p.gallery_images ||
+              p.gallery_urls ||
+              p.galleryImages ||
+              (p.project_images ? p.project_images : undefined) ||
+              "FOLDER::" + slugValue + "/*",
+            // flexible description fallback
+            description:
+              p.description ||
+              p.meta_description ||
+              p.project_description ||
+              p.summary ||
+              ((p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "."),
             brochure_url: p.brochure_url || "",
             youtube_video_url: p.youtube_video_url || undefined,
             virtual_tour_url: p.virtual_tour_url || undefined,
@@ -320,27 +310,24 @@ description:
               for: p.for || "under-construction",
               segment: (p.segment || "residential").toString().toLowerCase(),
               status: p.status || undefined,
-              // images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
-images:
-  p.gallery_image_urls ||
-  p.gallery ||
-  p.images ||
-  p.image ||
-  p.image_urls ||
-  p.gallery_images ||
-  p.gallery_urls ||
-  p.galleryImages ||
-  (p.project_images ? p.project_images : undefined) ||
-  "FOLDER::" + slugValue + "/*",
-
-// description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
-description:
-  p.description ||
-  p.meta_description ||
-  p.project_description ||
-  p.summary ||
-  ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
-brochure_url: p.brochure_url || "",
+              images:
+                p.gallery_image_urls ||
+                p.gallery ||
+                p.images ||
+                p.image ||
+                p.image_urls ||
+                p.gallery_images ||
+                p.gallery_urls ||
+                p.galleryImages ||
+                (p.project_images ? p.project_images : undefined) ||
+                "FOLDER::" + slugValue + "/*",
+              description:
+                p.description ||
+                p.meta_description ||
+                p.project_description ||
+                p.summary ||
+                ((p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "."),
+              brochure_url: p.brochure_url || "",
               youtube_video_url: p.youtube_video_url || undefined,
               virtual_tour_url: p.virtual_tour_url || undefined,
               floor_plan_urls: p.floor_plan_urls || undefined,
@@ -416,6 +403,14 @@ brochure_url: p.brochure_url || "",
 
   const property = propFromState || propFromSheet || null;
 
+  // DEBUG LOGS - safe placement (after 'property' and 'rows' exist)
+  useEffect(() => {
+    console.log("PropertyDetailsPage: propFromState present:", !!propFromState);
+    console.log("PropertyDetailsPage: propFromSheet found:", !!propFromSheet);
+    console.log("PropertyDetailsPage: final property object (keys):", property ? Object.keys(property).slice(0,50) : property);
+    console.log("PropertyDetailsPage: rows length:", rows.length);
+  }, [propFromState, propFromSheet, property, rows]);
+
   const [images, setImages] = useState<string[]>([]);
   const [imgLoading, setImgLoading] = useState(true);
 
@@ -458,7 +453,7 @@ brochure_url: p.brochure_url || "",
   const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
   const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
-  // small helpers to compose overview values
+  // small flexible getter
   const getProp = (p: any, ...keys: string[]) => {
     if (!p) return undefined;
     for (const k of keys) {
@@ -625,7 +620,7 @@ brochure_url: p.brochure_url || "",
                 <div>
                   <div className="h-96 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={ (property as any).hero_image_url || (images.length ? images[index] : "/prop-pics/default-hero.jpg") }
+                      src={(property as any).hero_image_url || (images.length ? images[index] : "/prop-pics/default-hero.jpg")}
                       alt={(property.title || "Property") + " - " + (index + 1)}
                       className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                     />
