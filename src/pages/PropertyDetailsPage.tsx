@@ -227,8 +227,27 @@ useEffect(() => {
             for: "under-construction",
             segment: (p.segment || "residential").toString().toLowerCase(),
             status: p.status || undefined,
-            description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
-            images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
+            // images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
+images:
+  p.gallery_image_urls ||
+  p.gallery ||
+  p.images ||
+  p.image ||
+  p.image_urls ||
+  p.gallery_images ||
+  p.gallery_urls ||
+  p.galleryImages ||
+  (p.project_images ? p.project_images : undefined) ||
+  "FOLDER::" + slugValue + "/*",
+
+// description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+description:
+  p.description ||
+  p.meta_description ||
+  p.project_description ||
+  p.summary ||
+  ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+
             brochure_url: p.brochure_url || "",
             youtube_video_url: p.youtube_video_url || undefined,
             virtual_tour_url: p.virtual_tour_url || undefined,
@@ -301,9 +320,27 @@ useEffect(() => {
               for: p.for || "under-construction",
               segment: (p.segment || "residential").toString().toLowerCase(),
               status: p.status || undefined,
-              description: p.description || undefined,
-              images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
-              brochure_url: p.brochure_url || "",
+              // images: p.gallery_image_urls || p.gallery || "FOLDER::" + slugValue + "/*",
+images:
+  p.gallery_image_urls ||
+  p.gallery ||
+  p.images ||
+  p.image ||
+  p.image_urls ||
+  p.gallery_images ||
+  p.gallery_urls ||
+  p.galleryImages ||
+  (p.project_images ? p.project_images : undefined) ||
+  "FOLDER::" + slugValue + "/*",
+
+// description: p.description || ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+description:
+  p.description ||
+  p.meta_description ||
+  p.project_description ||
+  p.summary ||
+  ( (p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "." ),
+brochure_url: p.brochure_url || "",
               youtube_video_url: p.youtube_video_url || undefined,
               virtual_tour_url: p.virtual_tour_url || undefined,
               floor_plan_urls: p.floor_plan_urls || undefined,
