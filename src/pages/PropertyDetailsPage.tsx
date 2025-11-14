@@ -657,6 +657,13 @@ export default function PropertyDetailsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Overview</h2>
+                  {/* TEMP DEBUG: show whole property object (remove when done) */}
+<div className="mt-3 p-3 bg-gray-50 rounded text-xs text-gray-700">
+  <pre style={{whiteSpace:"pre-wrap", maxHeight: 240, overflow: "auto" }}>
+    {JSON.stringify(property, null, 2)}
+  </pre>
+</div>
+
                   {metaTitle ? <div className="text-sm text-gray-500 mt-1">{metaTitle}</div> : null}
                 </div>
                 <div className="text-sm text-gray-500">{property.areaSqft || "—"}</div>
