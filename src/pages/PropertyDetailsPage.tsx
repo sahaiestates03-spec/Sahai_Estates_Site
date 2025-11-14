@@ -28,8 +28,8 @@ function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construc
   if (!price || price <= 0) return listingFor === "rent" ? "₹ — / month" : "Price on request";
   if (listingFor === "rent") {
     if (price >= 100000) {
-      var lvalue = price / 100000;
-      var decimals = lvalue >= 10 ? 1 : 2;
+      const lvalue = price / 100000;
+      const decimals = lvalue >= 10 ? 1 : 2;
       return String(lvalue.toFixed(decimals)) + " L / month";
     }
     return "₹" + inr(price) + " / month";
@@ -401,7 +401,6 @@ export default function PropertyDetailsPage() {
     if (index >= images.length) setIndex(0);
   }, [images, index]);
 
-  const [fit, setFit] = useState<"contain"|"cover">("contain");
   const prev = () => setIndex(i => (images.length ? (i - 1 + images.length) % images.length : 0));
   const next = () => setIndex(i => (images.length ? (i + 1) % images.length : 0));
   const goto = (i: number) => setIndex(i);
@@ -410,23 +409,75 @@ export default function PropertyDetailsPage() {
   const waNumber = "919920214015"; // +91 9920214015
   const salesPhoneFallback = "9920214015";
 
-  const waText = property ? "Hi, I'm interested in " + (property.title || property.project_name) + " (" + priceLabel(property.price, property.listingFor) + "). Please share details." : "";
+  const waText = property ? "Hi, I'm interested in " + (property.title || property.project_name) + " (" + priceLabel(property.price as any, property.listingFor) + "). Please share details." : "";
   const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
   const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
   // small helpers to compose overview values
-  const getAddressLine = (p: any) => {
-    const parts = [];
-    if (p.address) parts.push(p.address);
-    if (p.location) parts.push(p.location);
-    if (p.pincode) parts.push("PIN: " + p.pincode);
-    return parts.join(" • ");
+  const getProp = (p: any, ...keys: string[]) => {
+    if (!p) return undefined;
+    for (const k of keys) {
+      if (p[k] !== undefined && p[k] !== null && String(p[k]).trim() !== "") return p[k];
+      const found = Object.keys(p).find(kk => kk.toLowerCase() === k.toLowerCase());
+      if (found && p[found] !== undefined && p[found] !== null && String(p[found]).trim() !== "") return p[found];
+    }
+    return undefined;
   };
+
+  // decide if this is new-launch / under-construction (show dev/architect/contractor only then)
+  const isNewLaunch =
+    Boolean(property && property.listingFor && String(property.listingFor).toLowerCase().includes("under")) ||
+    Boolean(getProp(property, "new_launch", "is_new_launch")) ||
+    Boolean(property && (property as any).for && String((property as any).for).toLowerCase().includes("under"));
+
+  // flexible getters for overview fields
+  const metaTitle = String(getProp(property, "meta_title", "metaTitle", "title") ?? "").trim();
+  const metaDescription = String(getProp(property, "meta_description", "metaDescription", "description") ?? property?.description ?? "").trim();
+  const developerName = String(getProp(property, "developer_name", "developer", "builder", "developerName") ?? "—");
+
+  // build address line from the best fields available
+  const addrParts = [
+    getProp(property, "address", "site_address", "location", "locality", "area", "areaLocality"),
+    getProp(property, "city", "town"),
+    getProp(property, "pincode", "pin", "postal_code")
+  ].filter(Boolean).map(x => String(x).trim());
+  const addressLine = addrParts.length ? addrParts.join(" • ") : "—";
+
+  const reraId = String(getProp(property, "rera_id", "rera", "reraId") ?? "—");
+  const reraUrl = String(getProp(property, "rera_url", "reraUrl", "rera link") ?? "");
+  const launchDate = String(getProp(property, "launch_date", "launchDate", "launch") ?? "—");
+  const possessionYear = String(getProp(property, "possession_year", "possessionYear", "possession") ?? "—");
+  const constructionStage = String(getProp(property, "construction_stage", "constructionStage") ?? "—");
+
+  const unitTypes = String(getProp(property, "unit_types", "unit types", "unitTypes") ?? "—");
+  const bedsOptions = String(getProp(property, "beds_options", "beds_options", "bedrooms", "beds", "bhk") ?? "—");
+
+  // carpet / area: try many fields
+  const carpetMin = getProp(property, "carpet_min_sqft", "carpet_min", "carpetmin");
+  const carpetMax = getProp(property, "carpet_max_sqft", "carpet_max", "carpetmax");
+  const areaFallback = getProp(property, "areaSqft", "area", "sizeSqft", "area");
+  let carpetRange = "—";
+  if (carpetMin || carpetMax) {
+    const min = carpetMin ? String(carpetMin).trim() : "";
+    const max = carpetMax ? String(carpetMax).trim() : "";
+    if (min && max) carpetRange = min + " - " + max + " sqft";
+    else if (min) carpetRange = min + " sqft";
+    else if (max) carpetRange = "Up to " + max + " sqft";
+  } else if (areaFallback) {
+    carpetRange = String(areaFallback).trim();
+  }
+
+  const totalAcres = String(getProp(property, "total_acres", "totalAcres") ?? "—");
+  const numTowers = String(getProp(property, "num_towers", "numTowers", "towers") ?? "—");
+  const floorsPerTower = String(getProp(property, "floors_per_tower", "floorsPerTower", "floors_per_tower") ?? "—");
+  const elevationStyle = String(getProp(property, "elevation_style", "elevationStyle", "elevation") ?? "—");
+  const architect = String(getProp(property, "architect", "architectName") ?? "—");
+  const contractor = String(getProp(property, "contractor", "main_contractor") ?? "—");
 
   const combineAmenities = (p: any) => {
     const fields = [
-      p.amenities_primary, p.amenities_sports, p.amenities_safety, p.amenities_green,
-      p.parking_type, p.parking_ratio, p.water_supply, p.power_backup, p.fire_safety
+      p?.amenities_primary, p?.amenities_sports, p?.amenities_safety, p?.amenities_green,
+      p?.parking_type, p?.parking_ratio, p?.water_supply, p?.power_backup, p?.fire_safety
     ];
     const list: string[] = [];
     fields.forEach((f) => {
@@ -435,6 +486,10 @@ export default function PropertyDetailsPage() {
     });
     return Array.from(new Set(list)).join(", ");
   };
+  const amenities = combineAmenities(property) || "—";
+
+  const youtubeUrl = String(getProp(property, "youtube_video_url", "youtube", "youtube_url") ?? "");
+  const virtualTour = String(getProp(property, "virtual_tour_url", "virtualTour", "virtual_tour") ?? "");
 
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -455,94 +510,6 @@ export default function PropertyDetailsPage() {
       </div>
     );
   }
-
-  // decide if this is new-launch / under-construction (show dev/architect/contractor only then)
-  const isNewLaunch =
-    Boolean(property.listingFor && String(property.listingFor).toLowerCase().includes("under")) ||
-    Boolean((property as any).new_launch) ||
-    Boolean((property as any).for && String((property as any).for).toLowerCase().includes("under"));
-
-    // overview values
--  const metaTitle = (property as any).meta_title || "";
--  const metaDescription = (property as any).meta_description || "";
--  const developerName = (property as any).developer_name || "—";
--  const addressLine = getAddressLine(property as any);
--  const reraId = (property as any).rera_id || "—";
--  const reraUrl = (property as any).rera_url || "";
--  const launchDate = (property as any).launch_date || "—";
--  const possessionYear = (property as any).possession_year || "—";
--  const constructionStage = (property as any).construction_stage || "—";
--  const unitTypes = (property as any).unit_types || "—";
--  const bedsOptions = (property as any).beds_options || (property as any).bedrooms || "—";
--  const carpetRange = ((property as any).carpet_min_sqft || (property as any).carpet_max_sqft) ? (((property as any).carpet_min_sqft || "—") + " - " + ((property as any).carpet_max_sqft || "—") + " sqft") : (property.areaSqft || "—");
--  const totalAcres = (property as any).total_acres || "—";
--  const numTowers = (property as any).num_towers || "—";
--  const floorsPerTower = (property as any).floors_per_tower || "—";
--  const elevationStyle = (property as any).elevation_style || "—";
--  const architect = (property as any).architect || "—";
--  const contractor = (property as any).contractor || "—";
--  const amenities = combineAmenities(property as any) || "—";
--  const youtubeUrl = (property as any).youtube_video_url || "";
--  const virtualTour = (property as any).virtual_tour_url || "";
-+  // flexible getter to handle multiple header variants (developer, developer_name, builder, etc.)
-+  const getProp = (p: any, ...keys: string[]) => {
-+    if (!p) return undefined;
-+    for (const k of keys) {
-+      // exact key
-+      if (p[k] !== undefined && p[k] !== null && String(p[k]).trim() !== "") return p[k];
-+      // case-insensitive key search
-+      const found = Object.keys(p).find(kk => kk.toLowerCase() === k.toLowerCase());
-+      if (found && p[found] !== undefined && p[found] !== null && String(p[found]).trim() !== "") return p[found];
-+    }
-+    return undefined;
-+  };
-+
-+  const metaTitle = String(getProp(property, "meta_title", "metaTitle", "title") ?? "").trim();
-+  const metaDescription = String(getProp(property, "meta_description", "metaDescription", "description") ?? property?.description ?? "").trim();
-+  const developerName = String(getProp(property, "developer_name", "developer", "builder", "developerName") ?? "—");
-+
-+  // build address line from the best fields available
-+  const addrParts = [
-+    getProp(property, "address", "site_address", "location", "locality", "area", "areaLocality"),
-+    getProp(property, "city", "town"),
-+    getProp(property, "pincode", "pin", "postal_code")
-+  ].filter(Boolean).map(x => String(x).trim());
-+  const addressLine = addrParts.length ? addrParts.join(" • ") : "—";
-+
-+  const reraId = String(getProp(property, "rera_id", "rera", "reraId") ?? "—");
-+  const reraUrl = String(getProp(property, "rera_url", "reraUrl", "rera link") ?? "");
-+  const launchDate = String(getProp(property, "launch_date", "launchDate", "launch") ?? "—");
-+  const possessionYear = String(getProp(property, "possession_year", "possessionYear", "possession") ?? "—");
-+  const constructionStage = String(getProp(property, "construction_stage", "constructionStage") ?? "—");
-+
-+  const unitTypes = String(getProp(property, "unit_types", "unit types", "unitTypes") ?? "—");
-+  const bedsOptions = String(getProp(property, "beds_options", "beds_options", "bedrooms", "beds", "bhk") ?? "—");
-+
-+  // carpet / area: try many fields
-+  const carpetMin = getProp(property, "carpet_min_sqft", "carpet_min", "carpetmin");
-+  const carpetMax = getProp(property, "carpet_max_sqft", "carpet_max", "carpetmax");
-+  const areaFallback = getProp(property, "areaSqft", "area", "sizeSqft", "area");
-+  let carpetRange = "—";
-+  if (carpetMin || carpetMax) {
-+    const min = carpetMin ? String(carpetMin).trim() : "";
-+    const max = carpetMax ? String(carpetMax).trim() : "";
-+    if (min && max) carpetRange = min + " - " + max + " sqft";
-+    else if (min) carpetRange = min + " sqft";
-+    else if (max) carpetRange = "Up to " + max + " sqft";
-+  } else if (areaFallback) {
-+    carpetRange = String(areaFallback).trim();
-+  }
-+
-+  const totalAcres = String(getProp(property, "total_acres", "totalAcres") ?? "—");
-+  const numTowers = String(getProp(property, "num_towers", "numTowers", "towers") ?? "—");
-+  const floorsPerTower = String(getProp(property, "floors_per_tower", "floorsPerTower", "floors_per_tower") ?? "—");
-+  const elevationStyle = String(getProp(property, "elevation_style", "elevationStyle", "elevation") ?? "—");
-+  const architect = String(getProp(property, "architect", "architectName") ?? "—");
-+  const contractor = String(getProp(property, "contractor", "main_contractor") ?? "—");
-+
-+  const amenities = combineAmenities(property as any) || "—";
-+  const youtubeUrl = String(getProp(property, "youtube_video_url", "youtube", "youtube_url") ?? "");
-+  const virtualTour = String(getProp(property, "virtual_tour_url", "virtualTour", "virtual_tour") ?? "");
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
@@ -583,7 +550,7 @@ export default function PropertyDetailsPage() {
           {/* Top CTAs */}
           <div className="flex items-center gap-3">
             <div className="inline-flex items-center px-4 py-2 rounded-lg bg-black text-white font-semibold shadow">
-              <span className="mr-3 text-sm">{priceLabel(property.price, property.listingFor)}</span>
+              <span className="mr-3 text-sm">{priceLabel(property.price as any, property.listingFor)}</span>
             </div>
 
             <a href={waLink} target="_blank" rel="noreferrer"
