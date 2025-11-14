@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight
 } from "lucide-react";
 
-/* ---------- helpers ---------- */
+/* ---------- small helpers ---------- */
 const sluggify = (s?: string | null) =>
   (s || "")
     .toString()
@@ -24,22 +24,23 @@ const same = (a?: string | null, b?: string | null) =>
 
 function inr(n: number) { return n.toLocaleString("en-IN"); }
 
-function priceLabel(price?: number, listingFor?: "resale"|"rent"|"under-construction") {
-  if (!price || price <= 0) return listingFor === "rent" ? "₹ — / month" : "Price on request";
+function priceLabel(price?: number | any, listingFor?: "resale"|"rent"|"under-construction") {
+  const p = typeof price === "number" ? price : (Number(String(price || "").replace(/[^\d]/g, "")) || 0);
+  if (!p || p <= 0) return listingFor === "rent" ? "₹ — / month" : "Price on request";
   if (listingFor === "rent") {
-    if (price >= 100000) {
-      const lvalue = price / 100000;
+    if (p >= 100000) {
+      const lvalue = p / 100000;
       const decimals = lvalue >= 10 ? 1 : 2;
       return String(lvalue.toFixed(decimals)) + " L / month";
     }
-    return "₹" + inr(price) + " / month";
+    return "₹" + inr(p) + " / month";
   }
-  if (price >= 10000000) return "₹" + String((price / 10000000).toFixed(2)) + " Cr";
-  if (price >= 100000) return "₹" + String((price / 100000).toFixed(2)) + " L";
-  return "₹" + inr(price);
+  if (p >= 10000000) return "₹" + String((p / 10000000).toFixed(2)) + " Cr";
+  if (p >= 100000) return "₹" + String((p / 100000).toFixed(2)) + " L";
+  return "₹" + inr(p);
 }
 
-/** Build image candidates */
+/* ---------- image helpers (robust) ---------- */
 function buildImageCandidates(p: PropertyRow): string[] {
   const out: string[] = [];
   const push = (u?: string) => {
@@ -50,7 +51,8 @@ function buildImageCandidates(p: PropertyRow): string[] {
     if (out.indexOf(final) === -1) out.push(final);
   };
 
-  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery || (p as any).hero_image_url || (p as any).image || (p as any).image_urls || (p as any).gallery_images || (p as any).gallery_urls;
+  const raw: any = (p as any).images || (p as any).gallery_image_urls || (p as any).gallery || (p as any).hero_image_url || (p as any).galleryImages || (p as any).gallery_images || (p as any).image_urls || (p as any).image;
+
   const seg = (p as any).segment ? String((p as any).segment).toLowerCase() : "";
   const slug = (p as any).slug ? String((p as any).slug).toLowerCase() : sluggify((p as any).id || (p as any).title);
   const folderGuesses: string[] = [];
@@ -108,7 +110,6 @@ function buildImageCandidates(p: PropertyRow): string[] {
   return out;
 }
 
-/** Preload images */
 async function preloadImages(urls: string[]): Promise<string[]> {
   const checks = urls.map(
     (u) =>
@@ -136,249 +137,116 @@ export default function PropertyDetailsPage() {
   const [rows, setRows] = useState<PropertyRow[]>([]);
   const [loading, setLoading] = useState<boolean>(!propFromState);
 
-  // ------------------ FIXED fetch logic ------------------
+  // fetch sheet + newLaunch and normalize both into PropertyRow shape
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
       try {
-        // 1) fetch existing sheet data (may return array or {result,data})
         let sheetResp: any = null;
-        try {
-          sheetResp = await fetchSheet();
-        } catch (err) {
-          console.error("fetchSheet error:", err);
-          sheetResp = null;
-        }
-
+        try { sheetResp = await fetchSheet(); } catch (err) { console.error("fetchSheet error:", err); sheetResp = null; }
         let sheetArray: any[] = [];
-        if (Array.isArray(sheetResp)) {
-          sheetArray = sheetResp;
-        } else if (sheetResp && Array.isArray(sheetResp.data)) {
-          sheetArray = sheetResp.data;
-        } else if (sheetResp && Array.isArray(sheetResp.rows)) {
-          sheetArray = sheetResp.rows;
-        } else {
-          sheetArray = [];
-        }
+        if (Array.isArray(sheetResp)) sheetArray = sheetResp;
+        else if (sheetResp && Array.isArray(sheetResp.data)) sheetArray = sheetResp.data;
+        else if (sheetResp && Array.isArray(sheetResp.rows)) sheetArray = sheetResp.rows;
+        else sheetArray = [];
 
-        // 2) fetch new launch data (may return array or {result,data})
         let nlResp: any = null;
-        try {
-          nlResp = await fetchNewLaunch();
-        } catch (err) {
-          console.error("fetchNewLaunch error:", err);
-          nlResp = null;
-        }
-
+        try { nlResp = await fetchNewLaunch(); } catch (err) { console.error("fetchNewLaunch error:", err); nlResp = null; }
         let nlArray: any[] = [];
-        if (Array.isArray(nlResp)) {
-          nlArray = nlResp;
-        } else if (nlResp && Array.isArray(nlResp.data)) {
-          nlArray = nlResp.data;
-        } else if (nlResp && Array.isArray(nlResp.rows)) {
-          nlArray = nlResp.rows;
-        } else {
-          nlArray = [];
-        }
+        if (Array.isArray(nlResp)) nlArray = nlResp;
+        else if (nlResp && Array.isArray(nlResp.data)) nlArray = nlResp.data;
+        else if (nlResp && Array.isArray(nlResp.rows)) nlArray = nlResp.rows;
+        else nlArray = [];
 
-        // 3) map newLaunch rows into PropertyRow shape (same mapping you used)
-        const mapped: PropertyRow[] = nlArray.map((p: any) => {
-          const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
-
+        // helper to map single raw row -> PropertyRow (used for both sheet and nl)
+        const mapRow = (p: any) => {
+          const slugValue = (p.slug || sluggify(p.project_name || p.project_id || p.title || p.id || "")).toString().trim().toLowerCase();
           let carpetArea = undefined;
           if (p.carpet_min_sqft || p.carpet_max_sqft) {
             const min = p.carpet_min_sqft ? String(p.carpet_min_sqft).trim() : "";
             const max = p.carpet_max_sqft ? String(p.carpet_max_sqft).trim() : "";
-            if (min && max) {
-              carpetArea = min + " - " + max + " sqft";
-            } else if (min) {
-              carpetArea = min + "+ sqft";
-            } else if (max) {
-              carpetArea = "Up to " + max + " sqft";
-            }
+            if (min && max) carpetArea = min + " - " + max + " sqft";
+            else if (min) carpetArea = min + " sqft";
+            else if (max) carpetArea = "Up to " + max + " sqft";
           }
+          const imagesField =
+            p.gallery_image_urls ||
+            p.gallery ||
+            p.images ||
+            p.image ||
+            p.image_urls ||
+            p.gallery_images ||
+            p.gallery_urls ||
+            p.galleryImages ||
+            p.project_images ||
+            p.hero_image_url ||
+            undefined;
+
+          const descriptionField =
+            p.description ||
+            p.meta_description ||
+            p.project_description ||
+            p.summary ||
+            p.short_description ||
+            undefined;
 
           return {
-            id: p.project_id || slugValue,
+            id: p.project_id || p.id || slugValue,
             slug: slugValue,
             title: p.project_name || p.title || slugValue,
             project_name: p.project_name || undefined,
-            developer_name: p.developer_name || undefined,
-            location: (p.locality || "") + (p.locality ? ", " : "") + (p.city || ""),
-            address: p.address || undefined,
-            pincode: p.pincode || undefined,
+            developer_name: p.developer_name || p.developer || p.builder || undefined,
+            location: (p.locality || p.area || "") + (p.locality ? ", " : "") + (p.city || p.town || ""),
+            address: p.address || p.site_address || undefined,
+            pincode: p.pincode || p.pin || p.postal_code || undefined,
             city: p.city || undefined,
             locality: p.locality || undefined,
-            price: p.price_min_inr ? Number(p.price_min_inr) : p.price ? Number(p.price) : 0,
+            price: p.price_min_inr ? Number(p.price_min_inr) : (p.price ? Number(p.price) : 0),
             price_min_inr: p.price_min_inr ? Number(p.price_min_inr) : undefined,
             price_max_inr: p.price_max_inr ? Number(p.price_max_inr) : undefined,
-            all_inclusive_price: p.all_inclusive_price || undefined,
-            price_note: p.price_note || undefined,
-            listingFor: "under-construction" as const,
-            for: "under-construction",
+            listingFor: p.listingFor || p.for || (p.for_sale ? "resale" : p.for_rent ? "rent" : undefined),
             segment: (p.segment || "residential").toString().toLowerCase(),
             status: p.status || undefined,
-            // flexible images fallback
-            images:
-              p.gallery_image_urls ||
-              p.gallery ||
-              p.images ||
-              p.image ||
-              p.image_urls ||
-              p.gallery_images ||
-              p.gallery_urls ||
-              p.galleryImages ||
-              (p.project_images ? p.project_images : undefined) ||
-              "FOLDER::" + slugValue + "/*",
-            // flexible description fallback
-            description:
-              p.description ||
-              p.meta_description ||
-              p.project_description ||
-              p.summary ||
-              ((p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "."),
-            brochure_url: p.brochure_url || "",
-            youtube_video_url: p.youtube_video_url || undefined,
-            virtual_tour_url: p.virtual_tour_url || undefined,
-            floor_plan_urls: p.floor_plan_urls || undefined,
-            site_plan_url: p.site_plan_url || undefined,
-            price_list_url: p.price_list_url || undefined,
-            rera_id: p.rera_id || undefined,
-            rera_url: p.rera_url || undefined,
+            description: descriptionField || ((p.developer_name || p.developer || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "."),
+            images: imagesField ? imagesField : ("FOLDER::" + slugValue + "/*"),
+            brochure_url: p.brochure_url || p.brochure || "",
+            youtube_video_url: p.youtube_video_url || p.youtube || undefined,
+            virtual_tour_url: p.virtual_tour_url || p.virtualTour || undefined,
+            rera_id: p.rera_id || p.rera || undefined,
+            rera_url: p.rera_url || p.reraUrl || undefined,
             launch_date: p.launch_date || undefined,
-            possession_quarter: p.possession_quarter || undefined,
-            possession_year: p.possession_year || undefined,
+            possession_year: p.possession_year || p.possession || undefined,
             construction_stage: p.construction_stage || undefined,
             unit_types: p.unit_types || undefined,
-            beds_options: p.beds_options || undefined,
+            beds_options: p.beds_options || p.bedrooms || p.beds || undefined,
             carpet_min_sqft: p.carpet_min_sqft || undefined,
             carpet_max_sqft: p.carpet_max_sqft || undefined,
             total_acres: p.total_acres || undefined,
             num_towers: p.num_towers || undefined,
             floors_per_tower: p.floors_per_tower || undefined,
-            elevation_style: p.elevation_style || undefined,
+            elevation_style: p.elevation_style || p.elevation || undefined,
             architect: p.architect || undefined,
             contractor: p.contractor || undefined,
-            amenities_primary: p.amenities_primary || undefined,
-            amenities_sports: p.amenities_sports || undefined,
-            amenities_safety: p.amenities_safety || undefined,
-            amenities_green: p.amenities_green || undefined,
-            parking_type: p.parking_type || undefined,
-            parking_ratio: p.parking_ratio || undefined,
-            water_supply: p.water_supply || undefined,
-            power_backup: p.power_backup || undefined,
-            fire_safety: p.fire_safety || undefined,
+            amenities_primary: p.amenities_primary || p.amenities || undefined,
             hero_image_url: p.hero_image_url || undefined,
             gallery_image_urls: p.gallery_image_urls || undefined,
             sales_person_name: p.sales_person_name || undefined,
-            sales_phone: p.sales_phone || undefined,
-            sales_email: p.sales_email || undefined,
+            sales_phone: p.sales_phone || p.sales_phone_number || p.salesPhone || undefined,
             meta_title: p.meta_title || undefined,
             meta_description: p.meta_description || undefined,
-            canonical_url: p.canonical_url || undefined,
-            featured: p.featured || undefined,
-            priority_rank: p.priority_rank || undefined,
-            notes: p.notes || undefined,
+            featured: p.featured || p.isFeatured || undefined,
             bedrooms: p.beds_option || p.bedrooms || undefined,
             propertyType: p.unit_types || undefined,
             areaSqft: carpetArea || undefined,
           } as PropertyRow;
-        });
+        };
 
-        // 4) map sheetArray rows into PropertyRow if sheetArray actually holds property objects already
-        const normalizedSheetRows: PropertyRow[] = sheetArray.map((p: any) => {
-          if (p && (p.slug || p.project_id || p.project_name || p.title)) {
-            const slugValue = (p.slug || sluggify(p.project_name || p.project_id || "")).toString().trim().toLowerCase();
-            return {
-              id: p.project_id || slugValue,
-              slug: slugValue,
-              title: p.project_name || p.title || slugValue,
-              project_name: p.project_name || undefined,
-              developer_name: p.developer_name || undefined,
-              location: (p.locality || "") + (p.locality ? ", " : "") + (p.city || ""),
-              address: p.address || undefined,
-              pincode: p.pincode || undefined,
-              city: p.city || undefined,
-              locality: p.locality || undefined,
-              price: p.price_min_inr ? Number(p.price_min_inr) : p.price ? Number(p.price) : 0,
-              price_min_inr: p.price_min_inr ? Number(p.price_min_inr) : undefined,
-              price_max_inr: p.price_max_inr ? Number(p.price_max_inr) : undefined,
-              all_inclusive_price: p.all_inclusive_price || undefined,
-              price_note: p.price_note || undefined,
-              listingFor: p.listingFor || "under-construction",
-              for: p.for || "under-construction",
-              segment: (p.segment || "residential").toString().toLowerCase(),
-              status: p.status || undefined,
-              images:
-                p.gallery_image_urls ||
-                p.gallery ||
-                p.images ||
-                p.image ||
-                p.image_urls ||
-                p.gallery_images ||
-                p.gallery_urls ||
-                p.galleryImages ||
-                (p.project_images ? p.project_images : undefined) ||
-                "FOLDER::" + slugValue + "/*",
-              description:
-                p.description ||
-                p.meta_description ||
-                p.project_description ||
-                p.summary ||
-                ((p.developer_name || "") + " new launch in " + (p.locality || p.city || "Mumbai") + "."),
-              brochure_url: p.brochure_url || "",
-              youtube_video_url: p.youtube_video_url || undefined,
-              virtual_tour_url: p.virtual_tour_url || undefined,
-              floor_plan_urls: p.floor_plan_urls || undefined,
-              site_plan_url: p.site_plan_url || undefined,
-              price_list_url: p.price_list_url || undefined,
-              rera_id: p.rera_id || undefined,
-              rera_url: p.rera_url || undefined,
-              launch_date: p.launch_date || undefined,
-              possession_quarter: p.possession_quarter || undefined,
-              possession_year: p.possession_year || undefined,
-              construction_stage: p.construction_stage || undefined,
-              unit_types: p.unit_types || undefined,
-              beds_options: p.beds_options || undefined,
-              carpet_min_sqft: p.carpet_min_sqft || undefined,
-              carpet_max_sqft: p.carpet_max_sqft || undefined,
-              total_acres: p.total_acres || undefined,
-              num_towers: p.num_towers || undefined,
-              floors_per_tower: p.floors_per_tower || undefined,
-              elevation_style: p.elevation_style || undefined,
-              architect: p.architect || undefined,
-              contractor: p.contractor || undefined,
-              amenities_primary: p.amenities_primary || undefined,
-              amenities_sports: p.amenities_sports || undefined,
-              amenities_safety: p.amenities_safety || undefined,
-              amenities_green: p.amenities_green || undefined,
-              parking_type: p.parking_type || undefined,
-              parking_ratio: p.parking_ratio || undefined,
-              water_supply: p.water_supply || undefined,
-              power_backup: p.power_backup || undefined,
-              fire_safety: p.fire_safety || undefined,
-              hero_image_url: p.hero_image_url || undefined,
-              gallery_image_urls: p.gallery_image_urls || undefined,
-              sales_person_name: p.sales_person_name || undefined,
-              sales_phone: p.sales_phone || undefined,
-              sales_email: p.sales_email || undefined,
-              meta_title: p.meta_title || undefined,
-              meta_description: p.meta_description || undefined,
-              canonical_url: p.canonical_url || undefined,
-              featured: p.featured || undefined,
-              priority_rank: p.priority_rank || undefined,
-              notes: p.notes || undefined,
-              bedrooms: p.beds_option || p.bedrooms || undefined,
-              propertyType: p.unit_types || undefined,
-              areaSqft: (p.carpet_min_sqft || p.carpet_max_sqft) ? ((p.carpet_min_sqft||"") + " - " + (p.carpet_max_sqft||"") + " sqft") : undefined,
-            } as PropertyRow;
-          }
-          return {} as PropertyRow;
-        });
+        const mappedNL = nlArray.map(mapRow);
+        const mappedSheet = sheetArray.map(mapRow);
 
-        // 5) final rows: sheet rows first (if any) then mapped new-launch rows.
-        const finalRows = [...normalizedSheetRows.filter(r => r && (r.slug || r.id)), ...mapped];
+        // prefer sheet rows first, then new-launch entries
+        const finalRows = [...mappedSheet.filter(r => r && (r.slug || r.id)), ...mappedNL.filter(r => r && (r.slug || r.id))];
         if (alive) setRows(finalRows);
       } catch (err) {
         console.error("Error in property fetch flow:", err);
@@ -389,8 +257,8 @@ export default function PropertyDetailsPage() {
     })();
     return () => { alive = false; };
   }, []);
-  // ------------------ END fixed fetch logic ------------------
 
+  // find property from rows (sheet) using slug/id/title
   const propFromSheet = useMemo(() => {
     if (!rows.length || !key) return null;
     return (
@@ -401,16 +269,11 @@ export default function PropertyDetailsPage() {
     );
   }, [rows, key, slug]);
 
-  const property = (propFromSheet && Object.keys(propFromSheet).length > 3) ? propFromSheet : propFromState || propFromSheet || null;
+  // choose property: prefer sheet-based object (richer) else state
+  const sheetHasEnough = (r?: any) => r && Object.keys(r).length > 3;
+  const property = sheetHasEnough(propFromSheet) ? propFromSheet : (propFromState || propFromSheet || null);
 
-  // DEBUG LOGS - safe placement (after 'property' and 'rows' exist)
-  useEffect(() => {
-    console.log("PropertyDetailsPage: propFromState present:", !!propFromState);
-    console.log("PropertyDetailsPage: propFromSheet found:", !!propFromSheet);
-    console.log("PropertyDetailsPage: final property object (keys):", property ? Object.keys(property).slice(0,50) : property);
-    console.log("PropertyDetailsPage: rows length:", rows.length);
-  }, [propFromState, propFromSheet, property, rows]);
-
+  // images
   const [images, setImages] = useState<string[]>([]);
   const [imgLoading, setImgLoading] = useState(true);
 
@@ -445,15 +308,14 @@ export default function PropertyDetailsPage() {
   const next = () => setIndex(i => (images.length ? (i + 1) % images.length : 0));
   const goto = (i: number) => setIndex(i);
 
-  // UPDATED: use 9920214015 as requested
-  const waNumber = "919920214015"; // +91 9920214015
+  // contact links
+  const waNumber = "919920214015"; // update if needed
   const salesPhoneFallback = "9920214015";
-
   const waText = property ? "Hi, I'm interested in " + (property.title || property.project_name) + " (" + priceLabel(property.price as any, property.listingFor) + "). Please share details." : "";
   const waLink = property ? "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText) : "https://wa.me/" + waNumber;
   const telLink = "tel:+91" + ((property as any)?.sales_phone || (property as any)?.phone || salesPhoneFallback);
 
-  // small flexible getter
+  // small flexible getter for different header names
   const getProp = (p: any, ...keys: string[]) => {
     if (!p) return undefined;
     for (const k of keys) {
@@ -464,18 +326,17 @@ export default function PropertyDetailsPage() {
     return undefined;
   };
 
-  // decide if this is new-launch / under-construction (show dev/architect/contractor only then)
+  // determine if new-launch style
   const isNewLaunch =
     Boolean(property && property.listingFor && String(property.listingFor).toLowerCase().includes("under")) ||
     Boolean(getProp(property, "new_launch", "is_new_launch")) ||
     Boolean(property && (property as any).for && String((property as any).for).toLowerCase().includes("under"));
 
-  // flexible getters for overview fields
+  // flexible overview values (many fallbacks)
   const metaTitle = String(getProp(property, "meta_title", "metaTitle", "title") ?? "").trim();
   const metaDescription = String(getProp(property, "meta_description", "metaDescription", "description") ?? property?.description ?? "").trim();
   const developerName = String(getProp(property, "developer_name", "developer", "builder", "developerName") ?? "—");
 
-  // build address line from the best fields available
   const addrParts = [
     getProp(property, "address", "site_address", "location", "locality", "area", "areaLocality"),
     getProp(property, "city", "town"),
@@ -488,11 +349,10 @@ export default function PropertyDetailsPage() {
   const launchDate = String(getProp(property, "launch_date", "launchDate", "launch") ?? "—");
   const possessionYear = String(getProp(property, "possession_year", "possessionYear", "possession") ?? "—");
   const constructionStage = String(getProp(property, "construction_stage", "constructionStage") ?? "—");
-
   const unitTypes = String(getProp(property, "unit_types", "unit types", "unitTypes") ?? "—");
   const bedsOptions = String(getProp(property, "beds_options", "beds_options", "bedrooms", "beds", "bhk") ?? "—");
 
-  // carpet / area: try many fields
+  // carpet / area
   const carpetMin = getProp(property, "carpet_min_sqft", "carpet_min", "carpetmin");
   const carpetMax = getProp(property, "carpet_max_sqft", "carpet_max", "carpetmax");
   const areaFallback = getProp(property, "areaSqft", "area", "sizeSqft", "area");
@@ -514,6 +374,7 @@ export default function PropertyDetailsPage() {
   const architect = String(getProp(property, "architect", "architectName") ?? "—");
   const contractor = String(getProp(property, "contractor", "main_contractor") ?? "—");
 
+  // combine amenities (comma separated)
   const combineAmenities = (p: any) => {
     const fields = [
       p?.amenities_primary, p?.amenities_sports, p?.amenities_safety, p?.amenities_green,
@@ -527,9 +388,6 @@ export default function PropertyDetailsPage() {
     return Array.from(new Set(list)).join(", ");
   };
   const amenities = combineAmenities(property) || "—";
-
-  const youtubeUrl = String(getProp(property, "youtube_video_url", "youtube", "youtube_url") ?? "");
-  const virtualTour = String(getProp(property, "virtual_tour_url", "virtualTour", "virtual_tour") ?? "");
 
   if (!property && loading) {
     return <div className="pt-40 text-center text-gray-500">Loading...</div>;
@@ -547,6 +405,19 @@ export default function PropertyDetailsPage() {
         <Link to="/properties" className="inline-block mt-6 px-5 py-3 bg-black text-white rounded-lg">
           Back to Properties
         </Link>
+      </div>
+    );
+  }
+
+  /* ---------- conditional row renderer (keeps UI clean) ---------- */
+  function renderRow(label: string, value: any) {
+    if (value === undefined || value === null) return null;
+    const s = String(value).trim();
+    if (!s || s === "—") return null;
+    return (
+      <div className="flex justify-between">
+        <div className="text-gray-500">{label}</div>
+        <div className="font-medium">{s}</div>
       </div>
     );
   }
@@ -605,7 +476,6 @@ export default function PropertyDetailsPage() {
               title={"Call " + ((property as any).sales_phone || (property as any).phone || salesPhoneFallback)}
             >
               <Phone size={16} /> <span className="font-medium">Call</span>
-              <span className="sr-only">{(property as any).sales_phone || (property as any).phone || salesPhoneFallback}</span>
             </a>
           </div>
         </div>
@@ -620,7 +490,7 @@ export default function PropertyDetailsPage() {
                 <div>
                   <div className="h-96 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={(property as any).hero_image_url || (images.length ? images[index] : "/prop-pics/default-hero.jpg")}
+                      src={ (property as any).hero_image_url || (images.length ? images[index] : "/prop-pics/default-hero.jpg") }
                       alt={(property.title || "Property") + " - " + (index + 1)}
                       className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                     />
@@ -657,13 +527,6 @@ export default function PropertyDetailsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Overview</h2>
-                  {/* TEMP DEBUG: show whole property object (remove when done) */}
-<div className="mt-3 p-3 bg-gray-50 rounded text-xs text-gray-700">
-  <pre style={{whiteSpace:"pre-wrap", maxHeight: 240, overflow: "auto" }}>
-    {JSON.stringify(property, null, 2)}
-  </pre>
-</div>
-
                   {metaTitle ? <div className="text-sm text-gray-500 mt-1">{metaTitle}</div> : null}
                 </div>
                 <div className="text-sm text-gray-500">{property.areaSqft || "—"}</div>
@@ -673,48 +536,45 @@ export default function PropertyDetailsPage() {
                 {metaDescription || property.description || "No description available."}
               </p>
 
-              {/* Important details grid */}
+              {/* Important details (conditional rows) */}
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                 <div className="space-y-2">
-                  {isNewLaunch ? (
-                    <div className="flex justify-between"><div className="text-gray-500">Developer</div><div className="font-medium">{developerName}</div></div>
-                  ) : null}
-                  <div className="flex justify-between"><div className="text-gray-500">Address</div><div className="font-medium">{addressLine || "—"}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">PIN / City</div><div className="font-medium">{(property as any).pincode || "—"}{(property as any).city ? (" • " + (property as any).city) : ""}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">RERA</div>
-                    <div className="font-medium">
-                      {reraId}
-                      {reraUrl ? <a href={reraUrl} target="_blank" rel="noreferrer" className="ml-2 text-indigo-600 underline">View</a> : null}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between"><div className="text-gray-500">Launch Date</div><div className="font-medium">{launchDate}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Possession</div><div className="font-medium">{possessionYear}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Construction Stage</div><div className="font-medium">{constructionStage}</div></div>
+                  {isNewLaunch ? renderRow("Developer", developerName) : null}
+                  {renderRow("Address", addressLine)}
+                  {renderRow("PIN / City", ((property as any).pincode ? ((property as any).pincode + (property.city ? " • " + property.city : "")) : (property.city ? property.city : undefined)))}
+                  {renderRow("RERA", reraId !== "—" ? (reraId + (reraUrl ? " " : "")) : undefined)}
+                  {reraUrl ? <div className="flex justify-between"><div className="text-gray-500">RERA Link</div><div className="font-medium"><a href={reraUrl} target="_blank" rel="noreferrer" className="text-indigo-600 underline">View</a></div></div> : null}
+                  {renderRow("Launch Date", launchDate)}
+                  {renderRow("Possession", possessionYear)}
+                  {renderRow("Construction Stage", constructionStage)}
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between"><div className="text-gray-500">Unit Types</div><div className="font-medium">{unitTypes}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Bedrooms</div><div className="font-medium">{bedsOptions}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Carpet Area</div><div className="font-medium">{carpetRange}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Total Area (acres)</div><div className="font-medium">{totalAcres}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Towers</div><div className="font-medium">{numTowers}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Floors / Tower</div><div className="font-medium">{floorsPerTower}</div></div>
-                  <div className="flex justify-between"><div className="text-gray-500">Elevation</div><div className="font-medium">{elevationStyle}</div></div>
+                  {renderRow("Unit Types", unitTypes)}
+                  {renderRow("Bedrooms", bedsOptions)}
+                  {renderRow("Carpet Area", carpetRange)}
+                  {renderRow("Total Area (acres)", totalAcres)}
+                  {renderRow("Towers", numTowers)}
+                  {renderRow("Floors / Tower", floorsPerTower)}
+                  {renderRow("Elevation", elevationStyle)}
                 </div>
               </div>
 
-              {/* Architect / Contractor / Amenities */}
-              {isNewLaunch ? (
+              {/* Architect/Contractor (only when present) */}
+              {(architect && architect !== "—") || (contractor && contractor !== "—") ? (
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                  <div>
-                    <div className="text-gray-500">Architect</div>
-                    <div className="font-medium mt-1">{architect}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500">Contractor</div>
-                    <div className="font-medium mt-1">{contractor}</div>
-                  </div>
+                  {architect && architect !== "—" ? (
+                    <div>
+                      <div className="text-gray-500">Architect</div>
+                      <div className="font-medium mt-1">{architect}</div>
+                    </div>
+                  ) : null}
+                  {contractor && contractor !== "—" ? (
+                    <div>
+                      <div className="text-gray-500">Contractor</div>
+                      <div className="font-medium mt-1">{contractor}</div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -725,11 +585,11 @@ export default function PropertyDetailsPage() {
 
               {/* Media */}
               <div className="mt-5 flex flex-wrap gap-3">
-                {youtubeUrl ? (
-                  <a href={youtubeUrl} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Watch Video</a>
+                {getProp(property, "youtube_video_url", "youtube", "youtube_url") ? (
+                  <a href={String(getProp(property, "youtube_video_url", "youtube", "youtube_url"))} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Watch Video</a>
                 ) : null}
-                {virtualTour ? (
-                  <a href={virtualTour} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Virtual Tour</a>
+                {getProp(property, "virtual_tour_url", "virtualTour", "virtual_tour") ? (
+                  <a href={String(getProp(property, "virtual_tour_url", "virtualTour", "virtual_tour"))} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded">Virtual Tour</a>
                 ) : null}
               </div>
             </div>
@@ -766,7 +626,7 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
 
-          {/* Right column / Agent CTA & Brochure */}
+          {/* Right column */}
           <aside className="space-y-4">
             <div className="sticky top-24">
               <div className="bg-white rounded-2xl shadow p-5 space-y-4 border">
@@ -786,7 +646,6 @@ export default function PropertyDetailsPage() {
                          title={"Call " + ((property as any).sales_phone || (property as any).phone || salesPhoneFallback)}
                       >
                         <Phone size={16} /> <span className="text-sm">Call</span>
-                        <span className="sr-only">{(property as any).sales_phone || (property as any).phone || salesPhoneFallback}</span>
                       </a>
                     </div>
                   </div>
@@ -802,7 +661,6 @@ export default function PropertyDetailsPage() {
                 </div>
               </div>
 
-              {/* Developer & RERA card */}
               <div className="bg-white rounded-xl shadow p-5 mt-4 text-sm text-gray-700 border">
                 <div className="font-semibold mb-2">Developer</div>
                 <div>{developerName}</div>
@@ -813,7 +671,7 @@ export default function PropertyDetailsPage() {
                   </div>
                 ) : null}
 
-                {property.rera_id || property.rera_url ? (
+                {(property.rera_id || property.rera_url) ? (
                   <div className="mt-3">
                     <div className="text-xs text-gray-500">RERA</div>
                     <div className="font-medium">
