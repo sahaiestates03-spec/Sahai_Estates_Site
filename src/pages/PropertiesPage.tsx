@@ -1,9 +1,58 @@
+// src/pages/PropertiesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { fetchSheet, type PropertyRow } from "../data/sheet";
 import PropertyCard from "../components/PropertyCard";
 
-/** parse number safely from query string */
+/** safe numeric parse for price strings */
+function parsePriceValue(v: any): number | undefined {
+  if (v == null) return undefined;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const s = String(v).trim();
+  if (!s) return undefined;
+  // handle "12.5 Cr", "₹ 1,23,45,678", "1,23,45,678", "250 / month"
+  if (s.match(/cr/i)) {
+    const m = s.match(/[\d.,]+/);
+    if (m) {
+      const n = Number(m[0].replace(/,/g, ""));
+      if (!Number.isFinite(n)) return undefined;
+      return Math.round(n * 10000000);
+    }
+  }
+  if (s.match(/lakh|lac/i)) {
+    const m = s.match(/[\d.,]+/);
+    if (m) {
+      const n = Number(m[0].replace(/,/g, ""));
+      if (!Number.isFinite(n)) return undefined;
+      return Math.round(n * 100000);
+    }
+  }
+  // plain digits
+  const digits = s.replace(/[^\d.]/g, "");
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/** helper: first non-empty from many possible fields */
+function pickField(r: any, ...keys: string[]) {
+  for (const k of keys) {
+    const val = r?.[k];
+    if (val !== undefined && val !== null && String(val).trim() !== "") return val;
+  }
+  return undefined;
+}
+
+/** numeric parse helper for bhk/bedrooms */
+function parseBhk(v: any): number | undefined {
+  if (v == null) return undefined;
+  if (typeof v === "number") return Math.round(v);
+  const s = String(v).trim().toLowerCase();
+  const m = s.match(/\d+/);
+  if (m) return Number(m[0]);
+  return undefined;
+}
+
+/** parse query param number-ish */
 function num(v?: string | null) {
   if (!v) return undefined;
   const n = Number(String(v).replace(/[^\d]/g, ""));
@@ -18,9 +67,9 @@ export default function PropertiesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // read filters from query
-  const q_for = (params.get("for") || "").toLowerCase();            // 'resale' | 'rent' | 'under-construction'
-  const q_segment = (params.get("segment") || "").toLowerCase();    // 'residential' | 'commercial'
+  // query filters
+  const q_for = (params.get("for") || "").toLowerCase();         // 'resale' | 'rent' | 'under-construction'
+  const q_segment = (params.get("segment") || "").toLowerCase(); // 'residential' | 'commercial'
   const q_loc = (params.get("location") || "").toLowerCase();
   const q_min = num(params.get("min"));
   const q_max = num(params.get("max"));
@@ -44,34 +93,69 @@ export default function PropertiesPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      // for (rent/resale/new)
-      const forVal = (r as any).listingFor ? String((r as any).listingFor).toLowerCase() : "";
-      if (q_for && forVal !== q_for) return false;
+    if (!rows || !rows.length) return [];
 
-      // segment
-      const segVal = (r as any).segment ? String((r as any).segment).toLowerCase() : "";
-      if (q_segment && segVal !== q_segment) return false;
+    return rows.filter((rRaw) => {
+      // create a normalized accessor object to cover multiple header names
+      const r: Record<string, any> = rRaw as any;
 
-      // location contains
-      const locVal = (r as any).location ? String((r as any).location).toLowerCase() : "";
-      if (q_loc && !locVal.includes(q_loc)) return false;
+      // listingFor can be under many names: listingFor, status, for, saleType, listing_type
+      const listingForRaw = pickField(r, "listingFor", "listingfor", "status", "for", "saleType", "listing_type", "listingtype");
+      const listingFor = listingForRaw ? String(listingForRaw).toLowerCase() : "";
 
-      // bedrooms (minimum)
-      const bhkVal = (r as any).bedrooms ?? (r as any).bhk;
-      if (q_bhk && !(typeof bhkVal === "number" && bhkVal >= q_bhk)) return false;
+      // segment may be named segment, type, category
+      const segmentRaw = pickField(r, "segment", "type", "propertyType", "property_type");
+      const segment = segmentRaw ? String(segmentRaw).toLowerCase() : "";
 
-      // property type contains
-      const ptypeVal = (r as any).propertyType ? String((r as any).propertyType).toLowerCase() : "";
-      if (q_ptype && !ptypeVal.includes(q_ptype)) return false;
+      // location can be location, locality, area, city, address
+      const locRaw = pickField(r, "location", "locality", "area", "city", "address", "areaLocality");
+      const locVal = locRaw ? String(locRaw).toLowerCase() : "";
 
-      // price range (assumes price is rupees number or numeric string)
-      const priceRaw = (r as any).price;
-      const priceNum = typeof priceRaw === "number"
-        ? priceRaw
-        : Number(String(priceRaw ?? "").replace(/[^\d]/g, ""));
-      if (q_min != null && (!Number.isFinite(priceNum) || priceNum < q_min)) return false;
-      if (q_max != null && (!Number.isFinite(priceNum) || priceNum > q_max)) return false;
+      // bedrooms / bhk: many names
+      const bhkRaw = pickField(r, "bedrooms", "beds", "bhk", "beds_options", "bedsoptions");
+      const bhkVal = parseBhk(bhkRaw);
+
+      // propertyType / ptype
+      const ptypeRaw = pickField(r, "propertyType", "property_type", "unit_types", "unit_types");
+      const ptypeVal = ptypeRaw ? String(ptypeRaw).toLowerCase() : "";
+
+      // price: check many columns
+      const priceRaw = pickField(r, "price", "price_min_inr", "price_min", "all_inclusive_price", "price_min_inr");
+      const priceNum = parsePriceValue(priceRaw);
+
+      // ---- apply filters ----
+      // q_for (exact match)
+      if (q_for) {
+        if (!listingFor || listingFor.indexOf(q_for) === -1) return false;
+      }
+
+      // q_segment (exact match)
+      if (q_segment) {
+        if (!segment || segment.indexOf(q_segment) === -1) return false;
+      }
+
+      // q_loc contains
+      if (q_loc) {
+        if (!locVal || locVal.indexOf(q_loc) === -1) return false;
+      }
+
+      // q_bhk minimum
+      if (q_bhk != null) {
+        if (bhkVal == null || bhkVal < q_bhk) return false;
+      }
+
+      // ptype contains
+      if (q_ptype) {
+        if (!ptypeVal || ptypeVal.indexOf(q_ptype) === -1) return false;
+      }
+
+      // price range
+      if (q_min != null) {
+        if (priceNum == null || priceNum < q_min) return false;
+      }
+      if (q_max != null) {
+        if (priceNum == null || priceNum > q_max) return false;
+      }
 
       return true;
     });
