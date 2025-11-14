@@ -462,28 +462,87 @@ export default function PropertyDetailsPage() {
     Boolean((property as any).new_launch) ||
     Boolean((property as any).for && String((property as any).for).toLowerCase().includes("under"));
 
-  // overview values
-  const metaTitle = (property as any).meta_title || "";
-  const metaDescription = (property as any).meta_description || "";
-  const developerName = (property as any).developer_name || "—";
-  const addressLine = getAddressLine(property as any);
-  const reraId = (property as any).rera_id || "—";
-  const reraUrl = (property as any).rera_url || "";
-  const launchDate = (property as any).launch_date || "—";
-  const possessionYear = (property as any).possession_year || "—";
-  const constructionStage = (property as any).construction_stage || "—";
-  const unitTypes = (property as any).unit_types || "—";
-  const bedsOptions = (property as any).beds_options || (property as any).bedrooms || "—";
-  const carpetRange = ((property as any).carpet_min_sqft || (property as any).carpet_max_sqft) ? (((property as any).carpet_min_sqft || "—") + " - " + ((property as any).carpet_max_sqft || "—") + " sqft") : (property.areaSqft || "—");
-  const totalAcres = (property as any).total_acres || "—";
-  const numTowers = (property as any).num_towers || "—";
-  const floorsPerTower = (property as any).floors_per_tower || "—";
-  const elevationStyle = (property as any).elevation_style || "—";
-  const architect = (property as any).architect || "—";
-  const contractor = (property as any).contractor || "—";
-  const amenities = combineAmenities(property as any) || "—";
-  const youtubeUrl = (property as any).youtube_video_url || "";
-  const virtualTour = (property as any).virtual_tour_url || "";
+    // overview values
+-  const metaTitle = (property as any).meta_title || "";
+-  const metaDescription = (property as any).meta_description || "";
+-  const developerName = (property as any).developer_name || "—";
+-  const addressLine = getAddressLine(property as any);
+-  const reraId = (property as any).rera_id || "—";
+-  const reraUrl = (property as any).rera_url || "";
+-  const launchDate = (property as any).launch_date || "—";
+-  const possessionYear = (property as any).possession_year || "—";
+-  const constructionStage = (property as any).construction_stage || "—";
+-  const unitTypes = (property as any).unit_types || "—";
+-  const bedsOptions = (property as any).beds_options || (property as any).bedrooms || "—";
+-  const carpetRange = ((property as any).carpet_min_sqft || (property as any).carpet_max_sqft) ? (((property as any).carpet_min_sqft || "—") + " - " + ((property as any).carpet_max_sqft || "—") + " sqft") : (property.areaSqft || "—");
+-  const totalAcres = (property as any).total_acres || "—";
+-  const numTowers = (property as any).num_towers || "—";
+-  const floorsPerTower = (property as any).floors_per_tower || "—";
+-  const elevationStyle = (property as any).elevation_style || "—";
+-  const architect = (property as any).architect || "—";
+-  const contractor = (property as any).contractor || "—";
+-  const amenities = combineAmenities(property as any) || "—";
+-  const youtubeUrl = (property as any).youtube_video_url || "";
+-  const virtualTour = (property as any).virtual_tour_url || "";
++  // flexible getter to handle multiple header variants (developer, developer_name, builder, etc.)
++  const getProp = (p: any, ...keys: string[]) => {
++    if (!p) return undefined;
++    for (const k of keys) {
++      // exact key
++      if (p[k] !== undefined && p[k] !== null && String(p[k]).trim() !== "") return p[k];
++      // case-insensitive key search
++      const found = Object.keys(p).find(kk => kk.toLowerCase() === k.toLowerCase());
++      if (found && p[found] !== undefined && p[found] !== null && String(p[found]).trim() !== "") return p[found];
++    }
++    return undefined;
++  };
++
++  const metaTitle = String(getProp(property, "meta_title", "metaTitle", "title") ?? "").trim();
++  const metaDescription = String(getProp(property, "meta_description", "metaDescription", "description") ?? property?.description ?? "").trim();
++  const developerName = String(getProp(property, "developer_name", "developer", "builder", "developerName") ?? "—");
++
++  // build address line from the best fields available
++  const addrParts = [
++    getProp(property, "address", "site_address", "location", "locality", "area", "areaLocality"),
++    getProp(property, "city", "town"),
++    getProp(property, "pincode", "pin", "postal_code")
++  ].filter(Boolean).map(x => String(x).trim());
++  const addressLine = addrParts.length ? addrParts.join(" • ") : "—";
++
++  const reraId = String(getProp(property, "rera_id", "rera", "reraId") ?? "—");
++  const reraUrl = String(getProp(property, "rera_url", "reraUrl", "rera link") ?? "");
++  const launchDate = String(getProp(property, "launch_date", "launchDate", "launch") ?? "—");
++  const possessionYear = String(getProp(property, "possession_year", "possessionYear", "possession") ?? "—");
++  const constructionStage = String(getProp(property, "construction_stage", "constructionStage") ?? "—");
++
++  const unitTypes = String(getProp(property, "unit_types", "unit types", "unitTypes") ?? "—");
++  const bedsOptions = String(getProp(property, "beds_options", "beds_options", "bedrooms", "beds", "bhk") ?? "—");
++
++  // carpet / area: try many fields
++  const carpetMin = getProp(property, "carpet_min_sqft", "carpet_min", "carpetmin");
++  const carpetMax = getProp(property, "carpet_max_sqft", "carpet_max", "carpetmax");
++  const areaFallback = getProp(property, "areaSqft", "area", "sizeSqft", "area");
++  let carpetRange = "—";
++  if (carpetMin || carpetMax) {
++    const min = carpetMin ? String(carpetMin).trim() : "";
++    const max = carpetMax ? String(carpetMax).trim() : "";
++    if (min && max) carpetRange = min + " - " + max + " sqft";
++    else if (min) carpetRange = min + " sqft";
++    else if (max) carpetRange = "Up to " + max + " sqft";
++  } else if (areaFallback) {
++    carpetRange = String(areaFallback).trim();
++  }
++
++  const totalAcres = String(getProp(property, "total_acres", "totalAcres") ?? "—");
++  const numTowers = String(getProp(property, "num_towers", "numTowers", "towers") ?? "—");
++  const floorsPerTower = String(getProp(property, "floors_per_tower", "floorsPerTower", "floors_per_tower") ?? "—");
++  const elevationStyle = String(getProp(property, "elevation_style", "elevationStyle", "elevation") ?? "—");
++  const architect = String(getProp(property, "architect", "architectName") ?? "—");
++  const contractor = String(getProp(property, "contractor", "main_contractor") ?? "—");
++
++  const amenities = combineAmenities(property as any) || "—";
++  const youtubeUrl = String(getProp(property, "youtube_video_url", "youtube", "youtube_url") ?? "");
++  const virtualTour = String(getProp(property, "virtual_tour_url", "virtualTour", "virtual_tour") ?? "");
 
   return (
     <div className="pt-24 bg-gray-50 min-h-screen">
