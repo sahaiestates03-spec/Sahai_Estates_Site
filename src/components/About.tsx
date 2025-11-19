@@ -55,7 +55,7 @@ export default function About() {
           <div>
             <div className="relative">
               <img
-                src="https://drive.google.com/file/d/11pGBwXqDpDtUo4QBF6DGrWIuABRVkH2T/view?usp=sharing"
+                src="public/SIR.jpg"
                 alt="Real Estate Professional"
                 className="rounded-2xl shadow-2xl w-full"
               />
