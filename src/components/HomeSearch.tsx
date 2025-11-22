@@ -1,3 +1,5 @@
+// src/components/HomeSearch.tsx
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, MapPin, Search as SearchIcon, X } from 'lucide-react';
@@ -146,7 +148,7 @@ export default function HomeSearch() {
   return (
     <div
       ref={rootRef}
-      className="relative z-50 w-full bg-white/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 md:p-5 border border-white/30"
+      className="search-wrapper relative z-[80] w-full bg-white/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 md:p-5 border border-white/30"
     >
       {/* Tabs */}
       <div className="flex gap-3 text-sm font-semibold">
@@ -209,7 +211,7 @@ export default function HomeSearch() {
 
           {/* DROPDOWN PANEL */}
           {panelOpen && (
-            <div className="absolute z-[60] mt-2 w-full md:w-[min(860px,92vw)] bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200 shadow-2xl p-4 left-0">
+            <div className="absolute z-[90] mt-2 w-full md:w-[min(860px,92vw)] bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200 shadow-2xl p-4 left-0">
               {/* Suggestions */}
               <div className="mb-3">
                 <div className="text-[11px] text-gray-500 mb-1">Popular localities</div>
