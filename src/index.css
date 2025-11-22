@@ -51,3 +51,19 @@
     overflow-x: hidden;
   }
 }
+/* ===== GLOBAL FIX: Search above Featured New Launch ===== */
+.search-wrapper {
+  position: relative !important;
+  z-index: 80 !important;
+  overflow: visible !important;
+}
+
+.featured-new-launches {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Dropdown panel override */
+.search-wrapper * {
+  overflow: visible !important;
+}
