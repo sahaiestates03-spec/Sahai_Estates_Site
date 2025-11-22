@@ -9,8 +9,7 @@ import FeaturedNewLaunch from "../components/FeaturedNewLaunch";
 export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
-
-      {/* HERO SECTION */}
+      {/* HERO + TEXT + SEARCH */}
       <div className="relative z-[50]">
         <RotatingHero
           images={[
@@ -24,15 +23,13 @@ export default function HomePage() {
           ]}
           interval={6000}
           heightClass="min-h-[650px] md:min-h-[800px] lg:min-h-[920px]"
-        />
+        >
+          {/* ⬇️ Search hero ke andar, heading ke neeche */}
+          <HomeSearch />
+        </RotatingHero>
       </div>
 
-      {/* SEARCH BAR BELOW HERO TEXT */}
-      <div className="relative z-[80] -mt-20 mb-10">
-        <HomeSearch />
-      </div>
-
-      {/* FEATURED NEW LAUNCH */}
+      {/* FEATURED NEW LAUNCHES – hero ke neeche, z-index kam */}
       <div className="relative z-[10]">
         <FeaturedNewLaunch />
       </div>
