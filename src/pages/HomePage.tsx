@@ -1,9 +1,10 @@
-import RotatingHero from '../components/RotatingHero';
+import RotatingHero from "../components/RotatingHero";
 import Hero from '../components/Hero';
 import FeaturedProperties from '../components/FeaturedProperties';
 import About from '../components/About';
 import Testimonials from '../components/Testimonials';
 import ContactForm from '../components/ContactForm';
+import HomeSearch from "../components/HomeSearch";
 import FeaturedNewLaunch from "../components/FeaturedNewLaunch";
 
 export default function HomePage() {
@@ -23,9 +24,18 @@ export default function HomePage() {
   /* ⬇️ Yahi se height control hoti hai */
   heightClass="min-h-[650px] md:min-h-[800px] lg:min-h-[920px]"
 >
-  <Hero />
-</RotatingHero>
-<FeaturedNewLaunch />
+  {/* HERO + SEARCH ALWAYS ON TOP */}
+      <div className="relative z-[50]">
+        <RotatingHero />
+        {/* agar HomeSearch yahan separately call kar rahe ho to:
+        <HomeSearch />
+        */}
+      </div>
+
+      {/* FEATURED NEW LAUNCHES THODA PEECHE */}
+      <div className="relative z-[10]">
+        <FeaturedNewLaunch />
+      </div>
 
 
       {/* ✅ No manual heading here; component will render its own section */}
