@@ -1,53 +1,39 @@
-import { Link } from 'react-router-dom';
-import HomeSearch from './HomeSearch';
+import HomeSearch from "./HomeSearch";
 
 export default function Hero() {
   return (
-    <section className="relative pt-28 pb-40 md:pb-32 lg:pb-28 text-white">
-      {/* Background is handled by <RotatingHero /> */}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Headline */}
-        <h1 className="text-4xl md:text-6xl font-serif font-bold leading-tight drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)]">
-          Luxury Living in{' '}
-          <span className="bg-gradient-to-r from-brand-500 via-rose-500 to-brand-500 bg-clip-text text-transparent">
-            South Mumbai
-          </span>
+    <div className="relative z-20 flex flex-col items-center justify-center text-center px-4 pt-24 pb-16 md:pt-32 md:pb-24">
+      {/* Heading + subheading + buttons */}
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-white">
+          Luxury Living in <span className="text-red-400">South Mumbai</span>
         </h1>
 
-        {/* Subhead */}
-        <p className="mt-4 text-lg text-white/90 max-w-3xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
-          Discover exclusive sea-facing apartments and premium residences in Mumbai&apos;s most prestigious neighborhoods
+        <p className="mt-4 text-base md:text-lg text-white/80">
+          Discover exclusive sea-facing apartments and premium residences in Mumbai&apos;s
+          most prestigious neighborhoods.
         </p>
 
-        {/* CTAs */}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            to="/properties"
-            className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-6 py-3 font-semibold text-white
-                       shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50
-                       transition-all duration-300 hover:-translate-y-0.5 focus-visible:outline-none
-                       focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-500 focus-visible:ring-offset-transparent"
+        <div className="mt-8 flex flex-wrap gap-4 justify-center">
+          <a
+            href="#featured-properties"
+            className="px-6 py-3 rounded-lg bg-red-600 text-white font-semibold shadow-md hover:bg-red-700"
           >
             Explore Listings
-          </Link>
-
-          <Link
-            to="/contact"
-            className="inline-flex items-center justify-center rounded-lg bg-white/15 px-6 py-3 font-semibold text-white
-                       ring-1 ring-white/30 hover:bg-white/25 hover:ring-white/40
-                       backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white/50 focus-visible:ring-offset-transparent"
+          </a>
+          <a
+            href="#contact"
+            className="px-6 py-3 rounded-lg bg-white/80 text-gray-900 font-semibold shadow-md hover:bg-white"
           >
             Contact Me
-          </Link>
-        </div>
-
-        {/* Search panel */}
-        <div className="mt-10 relative z-50">
-          <HomeSearch />
+          </a>
         </div>
       </div>
-    </section>
+
+      {/* SEARCH BAR – bas yahi ek jagah */}
+      <div className="w-full mt-10">
+        <HomeSearch />
+      </div>
+    </div>
   );
 }
