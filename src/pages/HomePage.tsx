@@ -1,5 +1,5 @@
 import RotatingHero from "../components/RotatingHero";
-// import Hero from "../components/Hero"; // abhi use nahi ho raha, isliye comment kar diya
+// import Hero from "../components/Hero"; // abhi use nahi ho raha, isliye optional
 import FeaturedProperties from "../components/FeaturedProperties";
 import About from "../components/About";
 import Testimonials from "../components/Testimonials";
@@ -10,7 +10,7 @@ import FeaturedNewLaunch from "../components/FeaturedNewLaunch";
 export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
-      {/* HERO + SEARCH ALWAYS ON TOP */}
+      {/* HERO SECTION (peeche background image) + SEARCH (upar) */}
       <div className="relative z-[50]">
         <RotatingHero
           images={[
@@ -23,15 +23,14 @@ export default function HomePage() {
             "/BG-IMG-11.jpg",
           ]}
           interval={6000}
-          /* ⬇️ Yahi se height control hoti hai */
           heightClass="min-h-[650px] md:min-h-[800px] lg:min-h-[920px]"
         >
-          {/* ⬇️ Yehi pe search dikhaya jayega, isliye HomeSearch ko yahan rakho */}
+          {/* Yahi pe search dikh raha hai */}
           <HomeSearch />
         </RotatingHero>
       </div>
 
-      {/* FEATURED NEW LAUNCHES THODA PEECHE */}
+      {/* FEATURED NEW LAUNCHES HERO KE NICHE, Z-INDEX KAM */}
       <div className="relative z-[10]">
         <FeaturedNewLaunch />
       </div>
