@@ -148,7 +148,7 @@ export default function HomeSearch() {
   return (
   <div
     ref={rootRef}
-    className="search-wrapper relative z-[80] w-full max-w-6xl mx-auto mt-10 md:mt-14 lg:mt-16 bg-white/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 md:p-5 border border-white/30"
+    className="search-wrapper relative z-[80] w-full max-w-6xl mx-auto mt-7 md:mt-14 lg:mt-16 bg-white/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 md:p-5 border border-white/30"
   >
 
       {/* Tabs */}
