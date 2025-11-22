@@ -4,14 +4,12 @@ import FeaturedProperties from "../components/FeaturedProperties";
 import About from "../components/About";
 import Testimonials from "../components/Testimonials";
 import ContactForm from "../components/ContactForm";
-import HomeSearch from "../components/HomeSearch";
 import FeaturedNewLaunch from "../components/FeaturedNewLaunch";
 
 export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
-
-      {/* HERO BACKGROUND + HEADING + BUTTONS + SEARCH */}
+      {/* HERO (background slider) + OVERLAY (Hero component) */}
       <div className="relative z-[50]">
         <RotatingHero
           images={[
@@ -26,15 +24,12 @@ export default function HomePage() {
           interval={6000}
           heightClass="min-h-[650px] md:min-h-[800px] lg:min-h-[920px]"
         >
-          {/* ⬇️ Ye Hero.tsx ka content hai: "Luxury Living in South Mumbai" + buttons */}
+          {/* Sirf Hero, jiske andar search bhi hoga */}
           <Hero />
-
-          {/* ⬇️ Hero text ke thode neeche search bar */}
-          <HomeSearch />
         </RotatingHero>
       </div>
 
-      {/* FEATURED NEW LAUNCHES – hero ke neeche, search se peeche */}
+      {/* FEATURED NEW LAUNCHES – hero ke neeche */}
       <div className="relative z-[10]">
         <FeaturedNewLaunch />
       </div>
