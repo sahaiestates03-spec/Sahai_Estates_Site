@@ -1,5 +1,5 @@
 import RotatingHero from "../components/RotatingHero";
-import Hero from "../components/Hero";
+// import Hero from "../components/Hero"; // abhi use nahi ho raha, isliye comment kar diya
 import FeaturedProperties from "../components/FeaturedProperties";
 import About from "../components/About";
 import Testimonials from "../components/Testimonials";
@@ -25,7 +25,10 @@ export default function HomePage() {
           interval={6000}
           /* ⬇️ Yahi se height control hoti hai */
           heightClass="min-h-[650px] md:min-h-[800px] lg:min-h-[920px]"
-        />
+        >
+          {/* ⬇️ Yehi pe search dikhaya jayega, isliye HomeSearch ko yahan rakho */}
+          <HomeSearch />
+        </RotatingHero>
       </div>
 
       {/* FEATURED NEW LAUNCHES THODA PEECHE */}
@@ -33,7 +36,7 @@ export default function HomePage() {
         <FeaturedNewLaunch />
       </div>
 
-      {/* ✅ Featured properties section */}
+      {/* Featured properties section */}
       <section className="max-w-6xl mx-auto p-6">
         <FeaturedProperties />
       </section>
