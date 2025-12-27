@@ -14,7 +14,7 @@ export default function Footer() {
   // Social links (X + Website removed)
   const SOCIALS = {
     facebook: 'https://www.facebook.com/sahaiestates/',
-    linkedin: 'https://www.linkedin.com/company/sahai-estates/',
+    linkedin: 'https://www.linkedin.com/company/sahai-estates131/',
     instagram: 'https://www.instagram.com/sahai_estates/?igsh=NGt6am96bmN2cjl4#',
     youtube: 'https://www.youtube.com/@sahaiestates4075',
   } as const;
