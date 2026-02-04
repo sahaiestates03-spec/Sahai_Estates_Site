@@ -33,7 +33,7 @@ function inr(n: number) {
 
 function priceLabel(
   price?: number | any,
-  listingFor?: "resale" | "rent" | "under-construction"
+  listingFor?: "sale" | "rent" | "under-construction"
 ) {
   const p =
     typeof price === "number"
