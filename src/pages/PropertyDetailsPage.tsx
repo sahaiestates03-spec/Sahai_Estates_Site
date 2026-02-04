@@ -283,7 +283,7 @@ export default function PropertyDetailsPage() {
             listingFor:
               p.listingFor ||
               p.for ||
-              (p.for_sale ? "resale" : p.for_rent ? "rent" : undefined),
+              (p.for_sale ? "sale" : p.for_rent ? "rent" : undefined),
             segment: (p.segment || "residential").toString().toLowerCase(),
             status: p.status || undefined,
             description:
